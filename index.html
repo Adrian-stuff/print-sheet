@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Print Sheet — ID & Passport Photo Layout Maker</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<!-- Google AdSense: replace ca-pub-XXXXXXXXXXXXXXXX with your own publisher ID -->
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+<style>
+  :root{
+    --paper:#EDEAE2;
+    --paper-2:#E3DFD3;
+    --ink:#201F1D;
+    --ink-soft:#54514A;
+    --line:#C9C3B4;
+    --red:#C6362E;
+    --blue:#33546E;
+    --white:#FBFAF7;
+    --radius:2px;
+    --mono:'IBM Plex Mono', monospace;
+    --display:'Oswald', sans-serif;
+    --body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--body);
+    min-height:100vh;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:32px 32px;
+    background-position:-1px -1px;
+  }
+  @media (prefers-reduced-motion: reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+
+  header.site{
+    padding:28px clamp(16px,4vw,48px) 18px;
+    border-bottom:2px solid var(--ink);
+    display:flex;
+    align-items:flex-end;
+    justify-content:space-between;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .mark{
+    font-family:var(--mono);
+    font-size:12px;
+    letter-spacing:.12em;
+    color:var(--red);
+    border:1.5px solid var(--red);
+    padding:2px 6px;
+    transform:translateY(-4px);
+  }
+  h1{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(26px,4vw,38px);
+    letter-spacing:.01em;
+    margin:0;
+    text-transform:uppercase;
+  }
+  .tagline{
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--ink-soft);
+    max-width:340px;
+    text-align:right;
+    line-height:1.5;
+  }
+
+  main{
+    display:grid;
+    grid-template-columns:minmax(300px,380px) 1fr;
+    gap:0;
+    align-items:start;
+  }
+  @media (max-width:880px){
+    main{grid-template-columns:1fr;}
+  }
+
+  .panel{
+    padding:clamp(18px,3vw,32px);
+    border-right:2px solid var(--ink);
+  }
+  @media (max-width:880px){
+    .panel{border-right:none; border-bottom:2px solid var(--ink);}
+  }
+
+  section.block{margin-bottom:30px;}
+  .block-title{
+    font-family:var(--display);
+    font-size:13px;
+    letter-spacing:.14em;
+    text-transform:uppercase;
+    color:var(--ink);
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin:0 0 12px;
+  }
+  .block-title::before{
+    content:'';
+    width:16px;height:1.5px;background:var(--red);
+    display:inline-block;
+  }
+  .step-no{font-family:var(--mono); color:var(--ink-soft); font-size:12px;}
+
+  /* Uploader */
+  .dropzone{
+    border:1.5px dashed var(--ink);
+    background:var(--white);
+    padding:20px;
+    text-align:center;
+    cursor:pointer;
+    position:relative;
+    transition:background .15s ease, border-color .15s ease;
+  }
+  .dropzone:hover, .dropzone.drag{
+    background:#fff;
+    border-color:var(--red);
+  }
+  .dropzone input{position:absolute; inset:0; opacity:0; cursor:pointer;}
+  .dropzone .dz-icon{font-size:22px; margin-bottom:6px;}
+  .dropzone .dz-text{font-size:13px; color:var(--ink-soft);}
+  .dropzone .dz-text b{color:var(--ink);}
+
+  .preview-thumb{
+    display:flex; align-items:center; gap:12px;
+    margin-top:12px;
+    padding:8px;
+    border:1px solid var(--line);
+    background:var(--white);
+  }
+  .preview-thumb img{
+    width:56px; height:56px; object-fit:cover;
+    border:1px solid var(--ink);
+  }
+  .preview-thumb .meta{font-family:var(--mono); font-size:11px; color:var(--ink-soft); line-height:1.5;}
+  .preview-thumb .meta b{color:var(--ink); display:block; font-size:12px;}
+  .clear-btn{
+    margin-left:auto; background:none; border:none; color:var(--red);
+    font-family:var(--mono); font-size:11px; cursor:pointer; text-decoration:underline;
+    padding:4px;
+  }
+
+  /* form controls */
+  label.field{display:block; font-size:12.5px; color:var(--ink-soft); margin-bottom:6px; font-weight:500;}
+  select, input[type=number]{
+    font-family:var(--body);
+    font-size:14px;
+    padding:9px 10px;
+    border:1.5px solid var(--ink);
+    background:var(--white);
+    color:var(--ink);
+    border-radius:var(--radius);
+    width:100%;
+  }
+  select:focus, input:focus, button:focus-visible, .dropzone:focus-within{
+    outline:2px solid var(--blue);
+    outline-offset:2px;
+  }
+  .row2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+  .row2 + .row2{margin-top:10px;}
+
+  .size-list{border:1px solid var(--line); background:var(--white);}
+  .size-row{
+    display:grid;
+    grid-template-columns:22px 1fr auto auto;
+    align-items:center;
+    gap:10px;
+    padding:9px 10px;
+    border-bottom:1px solid var(--line);
+    font-size:13.5px;
+  }
+  .size-row:last-child{border-bottom:none;}
+  .size-row input[type=checkbox]{
+    width:16px;height:16px; accent-color:var(--red); cursor:pointer;
+  }
+  .size-row .sname{font-weight:500;}
+  .size-row .sdim{font-family:var(--mono); font-size:11.5px; color:var(--ink-soft);}
+  .qty-input{
+    width:52px; padding:5px 4px; text-align:center;
+    font-family:var(--mono); font-size:13px;
+    border:1px solid var(--ink); background:var(--paper);
+  }
+
+  .custom-row{padding:10px; display:flex; gap:8px; align-items:end; flex-wrap:wrap; border-top:1.5px dashed var(--line);}
+  .custom-row .field-sm{flex:1; min-width:64px;}
+  .custom-row label{font-size:11px; margin-bottom:4px;}
+  .add-btn{
+    font-family:var(--mono); font-size:12px; padding:9px 12px;
+    background:var(--ink); color:var(--white); border:none; cursor:pointer;
+  }
+  .add-btn:hover{background:var(--blue);}
+
+  .custom-list{margin-top:8px; display:flex; flex-direction:column; gap:6px;}
+  .custom-chip{
+    display:flex; align-items:center; gap:8px; justify-content:space-between;
+    background:var(--white); border:1px solid var(--line); padding:6px 10px; font-size:12.5px; font-family:var(--mono);
+  }
+  .custom-chip button{background:none; border:none; color:var(--red); cursor:pointer; font-size:12px;}
+
+  .generate-btn{
+    width:100%;
+    font-family:var(--display);
+    font-weight:600;
+    font-size:15px;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+    padding:16px;
+    background:var(--red);
+    color:var(--white);
+    border:none;
+    cursor:pointer;
+    margin-top:6px;
+    transition:background .15s ease, transform .1s ease;
+  }
+  .generate-btn:hover:not(:disabled){background:#a92b25;}
+  .generate-btn:active:not(:disabled){transform:translateY(1px);}
+  .generate-btn:disabled{background:var(--line); color:var(--ink-soft); cursor:not-allowed;}
+  .hint{font-family:var(--mono); font-size:11px; color:var(--ink-soft); margin-top:8px; line-height:1.6;}
+
+  /* Preview column */
+  .preview-col{
+    padding:clamp(18px,3vw,32px);
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    min-height:70vh;
+  }
+  .preview-head{
+    width:100%;
+    display:flex; justify-content:space-between; align-items:baseline; flex-wrap:wrap; gap:10px;
+    margin-bottom:16px;
+  }
+  .preview-head .count{font-family:var(--mono); font-size:12px; color:var(--ink-soft);}
+  .preview-head .count b{color:var(--ink);}
+
+  .sheet-wrap{
+    background:var(--white);
+    box-shadow:0 10px 26px rgba(32,31,29,.14), 0 0 0 1px var(--ink);
+    position:relative;
+  }
+  .sheet-wrap .page-label{
+    position:absolute; top:-24px; left:0;
+    font-family:var(--mono); font-size:11px; color:var(--ink-soft);
+  }
+  .pages-scroll{display:flex; flex-direction:column; gap:44px; align-items:center; width:100%;}
+
+  .empty-state{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; color:var(--ink-soft); flex:1; padding:60px 20px;
+    font-family:var(--mono); font-size:13px; gap:10px;
+  }
+  .empty-state .big{font-family:var(--display); font-size:20px; color:var(--ink); text-transform:uppercase; letter-spacing:.05em;}
+  .ruler-mark{width:1px; height:24px; background:var(--line); margin:0 auto;}
+
+  footer{
+    text-align:center; padding:18px; font-family:var(--mono); font-size:11px; color:var(--ink-soft);
+    border-top:2px solid var(--ink);
+  }
+
+  .ad-slot{
+    padding:14px clamp(16px,4vw,48px);
+    border-bottom:2px solid var(--ink);
+    background:var(--paper-2);
+  }
+  .ad-slot .ad-label{
+    font-family:var(--mono); font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--ink-soft); text-align:center; margin:0 0 8px;
+  }
+  .ad-slot .adsbygoogle{ min-height:90px; }
+  .ad-slot.ad-slot--sidebar{
+    border-bottom:none; border-top:1.5px dashed var(--line); margin-top:24px; padding:16px 0 0;
+  }
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="brand">
+    <span class="mark">01 / 01</span>
+    <h1>Print&nbsp;Sheet</h1>
+  </div>
+  <div class="tagline">ONE SQUARE PHOTO → CROPPED, SIZED, AND<br>LAID OUT WITH CUT MARKS ON YOUR PAPER OF CHOICE.</div>
+</header>
+
+<div class="ad-slot ad-slot--top">
+  <p class="ad-label">Advertisement</p>
+  <ins class="adsbygoogle"
+       style="display:block"
+       data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+       data-ad-slot="1111111111"
+       data-ad-format="auto"
+       data-full-width-responsive="true"></ins>
+  <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+</div>
+
+<main>
+  <div class="panel">
+
+    <section class="block">
+      <p class="block-title"><span class="step-no">01</span> Upload photo</p>
+      <div class="dropzone" id="dropzone" tabindex="0">
+        <input type="file" id="fileInput" accept="image/*" aria-label="Upload a square photo">
+        <div class="dz-icon">▣</div>
+        <div class="dz-text"><b>Click to upload</b> or drag a square image here<br>JPG or PNG, cropped to square automatically</div>
+      </div>
+      <div class="preview-thumb" id="thumbBox" style="display:none;">
+        <img id="thumbImg" alt="Uploaded photo preview">
+        <div class="meta">
+          <b id="thumbName">photo.jpg</b>
+          <span id="thumbDims">— × —</span>
+        </div>
+        <button class="clear-btn" id="clearBtn" type="button">remove</button>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="step-no">02</span> Paper</p>
+      <div class="row2">
+        <div>
+          <label class="field" for="paperSelect">Paper size</label>
+          <select id="paperSelect"></select>
+        </div>
+        <div>
+          <label class="field" for="orientSelect">Orientation</label>
+          <select id="orientSelect">
+            <option value="portrait">Portrait</option>
+            <option value="landscape">Landscape</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2">
+        <div>
+          <label class="field" for="marginInput">Margin (in)</label>
+          <input type="number" id="marginInput" min="0" max="1" step="0.05" value="0.25">
+        </div>
+        <div>
+          <label class="field" for="gapInput">Cut gap (in)</label>
+          <input type="number" id="gapInput" min="0" max="0.5" step="0.02" value="0.08">
+        </div>
+      </div>
+    </section>
+
+    <section class="block">
+      <p class="block-title"><span class="step-no">03</span> Sizes to print</p>
+      <div class="size-list" id="sizeList"></div>
+      <div class="custom-row">
+        <div class="field-sm">
+          <label>W (in)</label>
+          <input type="number" id="customW" min="0.5" max="12" step="0.1" value="1.5">
+        </div>
+        <div class="field-sm">
+          <label>H (in)</label>
+          <input type="number" id="customH" min="0.5" max="12" step="0.1" value="1.5">
+        </div>
+        <div class="field-sm">
+          <label>Qty</label>
+          <input type="number" id="customQty" min="1" max="40" step="1" value="2">
+        </div>
+        <button class="add-btn" id="addCustomBtn" type="button">+ Add size</button>
+      </div>
+      <div class="custom-list" id="customList"></div>
+    </section>
+
+    <button class="generate-btn" id="generateBtn" disabled>Generate PDF</button>
+    <p class="hint" id="statusHint">Upload a square photo to begin. Each size is centre-cropped from your photo to fill its frame, then packed onto the sheet with cut marks at every corner.</p>
+
+    <div class="ad-slot ad-slot--sidebar">
+      <p class="ad-label">Advertisement</p>
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
+           data-ad-slot="2222222222"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
+      <script>(adsbygoogle = window.adsbygoogle || []).push({});</script>
+    </div>
+  </div>
+
+  <div class="preview-col">
+    <div class="preview-head">
+      <span class="block-title" style="margin:0;"><span class="step-no">→</span> Layout preview</span>
+      <span class="count" id="countLabel"></span>
+    </div>
+    <div class="pages-scroll" id="pagesScroll">
+      <div class="empty-state" id="emptyState">
+        <div class="ruler-mark"></div>
+        <div class="big">No layout yet</div>
+        <div>upload a photo and pick at least one size<br>to see the print sheet build itself</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<footer>PRINT SHEET — runs entirely in your browser. Nothing is uploaded anywhere.</footer>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- data ---------- */
+  const PAPERS = [
+    {id:'letter', label:'Letter · 8.5×11 in', w:8.5, h:11},
+    {id:'legal',  label:'Legal · 8.5×14 in',  w:8.5, h:14},
+    {id:'a4',     label:'A4 · 8.27×11.69 in', w:8.27, h:11.69},
+    {id:'a5',     label:'A5 · 5.83×8.27 in',  w:5.83, h:8.27},
+    {id:'4r',     label:'4R · 4×6 in',        w:4,   h:6},
+    {id:'5r',     label:'5R · 5×7 in',        w:5,   h:7},
+    {id:'8r',     label:'8R · 8×10 in',       w:8,   h:10},
+  ];
+
+  const DEFAULT_SIZES = [
+    {id:'1x1',  label:'1 × 1 in',    w:1,   h:1,   qty:8,  enabled:true,  note:'Passport / ID'},
+    {id:'2x2',  label:'2 × 2 in',    w:2,   h:2,   qty:4,  enabled:true,  note:'Passport / ID'},
+    {id:'2x3',  label:'2 × 3 in',    w:2,   h:3,   qty:0,  enabled:false, note:'ID / visa'},
+    {id:'wallet',label:'2.5 × 3.5 in', w:2.5, h:3.5, qty:0, enabled:false, note:'Wallet'},
+    {id:'3x4',  label:'3 × 4 in',    w:3,   h:4,   qty:0,  enabled:false, note:'ID / visa'},
+    {id:'3.5x4.5',label:'3.5 × 4.5 in', w:3.5, h:4.5, qty:0, enabled:false, note:'Visa'},
+    {id:'4x6',  label:'4 × 6 in',    w:4,   h:6,   qty:0,  enabled:false, note:'Postcard / 4R'},
+    {id:'5x7',  label:'5 × 7 in',    w:5,   h:7,   qty:0,  enabled:false, note:'5R'},
+  ];
+
+  /* ---------- state ---------- */
+  let sourceCanvas = null;   // squared, cropped source image canvas
+  let fileName = '';
+  let sizes = DEFAULT_SIZES.map(s => ({...s}));
+  let customSizes = []; // {id,label,w,h,qty,enabled:true}
+  const croppedCache = new Map(); // key "wxh" -> dataURL
+
+  /* ---------- elements ---------- */
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const thumbBox = document.getElementById('thumbBox');
+  const thumbImg = document.getElementById('thumbImg');
+  const thumbName = document.getElementById('thumbName');
+  const thumbDims = document.getElementById('thumbDims');
+  const clearBtn = document.getElementById('clearBtn');
+  const paperSelect = document.getElementById('paperSelect');
+  const orientSelect = document.getElementById('orientSelect');
+  const marginInput = document.getElementById('marginInput');
+  const gapInput = document.getElementById('gapInput');
+  const sizeListEl = document.getElementById('sizeList');
+  const customListEl = document.getElementById('customList');
+  const customW = document.getElementById('customW');
+  const customH = document.getElementById('customH');
+  const customQty = document.getElementById('customQty');
+  const addCustomBtn = document.getElementById('addCustomBtn');
+  const generateBtn = document.getElementById('generateBtn');
+  const statusHint = document.getElementById('statusHint');
+  const pagesScroll = document.getElementById('pagesScroll');
+  const emptyState = document.getElementById('emptyState');
+  const countLabel = document.getElementById('countLabel');
+
+  /* ---------- init selects ---------- */
+  PAPERS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.label;
+    paperSelect.appendChild(opt);
+  });
+  paperSelect.value = 'letter';
+
+  function renderSizeList(){
+    sizeListEl.innerHTML = '';
+    sizes.forEach((s, idx) => {
+      const row = document.createElement('div');
+      row.className = 'size-row';
+      row.innerHTML = `
+        <input type="checkbox" data-idx="${idx}" class="size-check" ${s.enabled ? 'checked' : ''} aria-label="Include ${s.label}">
+        <span>
+          <span class="sname">${s.label}</span><br>
+          <span class="sdim">${s.note}</span>
+        </span>
+        <input type="number" class="qty-input size-qty" data-idx="${idx}" min="0" max="60" value="${s.qty}" aria-label="Quantity for ${s.label}">
+        <span></span>
+      `;
+      sizeListEl.appendChild(row);
+    });
+  }
+  renderSizeList();
+
+  function renderCustomList(){
+    customListEl.innerHTML = '';
+    customSizes.forEach((s, idx) => {
+      const chip = document.createElement('div');
+      chip.className = 'custom-chip';
+      chip.innerHTML = `<span>${s.w}×${s.h} in — qty ${s.qty}</span><button data-idx="${idx}" type="button">remove</button>`;
+      customListEl.appendChild(chip);
+    });
+  }
+
+  /* ---------- events: sizes ---------- */
+  sizeListEl.addEventListener('change', (e) => {
+    const idx = e.target.dataset.idx;
+    if (idx === undefined) return;
+    if (e.target.classList.contains('size-check')){
+      sizes[idx].enabled = e.target.checked;
+    } else if (e.target.classList.contains('size-qty')){
+      sizes[idx].qty = Math.max(0, parseInt(e.target.value || '0', 10));
+    }
+    scheduleUpdate();
+  });
+
+  addCustomBtn.addEventListener('click', () => {
+    const w = parseFloat(customW.value), h = parseFloat(customH.value), qty = parseInt(customQty.value, 10);
+    if (!w || !h || !qty || w <= 0 || h <= 0 || qty <= 0) return;
+    customSizes.push({id:'custom-'+Date.now(), w, h, qty, enabled:true});
+    renderCustomList();
+    scheduleUpdate();
+  });
+
+  customListEl.addEventListener('click', (e) => {
+    if (e.target.tagName !== 'BUTTON') return;
+    const idx = parseInt(e.target.dataset.idx, 10);
+    customSizes.splice(idx, 1);
+    renderCustomList();
+    scheduleUpdate();
+  });
+
+  [paperSelect, orientSelect, marginInput, gapInput].forEach(el => {
+    el.addEventListener('change', scheduleUpdate);
+    el.addEventListener('input', scheduleUpdate);
+  });
+
+  /* ---------- upload + center-crop to square ---------- */
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  fileInput.addEventListener('change', e => {
+    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
+  });
+  clearBtn.addEventListener('click', () => {
+    sourceCanvas = null; fileName = '';
+    croppedCache.clear();
+    thumbBox.style.display = 'none';
+    fileInput.value = '';
+    scheduleUpdate();
+  });
+
+  function handleFile(file){
+    if (!file.type.startsWith('image/')) return;
+    fileName = file.name;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.naturalWidth, img.naturalHeight);
+        const sx = (img.naturalWidth - side) / 2;
+        const sy = (img.naturalHeight - side) / 2;
+        const outSide = Math.min(1600, Math.max(600, side));
+        const cnv = document.createElement('canvas');
+        cnv.width = outSide; cnv.height = outSide;
+        const ctx = cnv.getContext('2d');
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, outSide, outSide);
+        sourceCanvas = cnv;
+        croppedCache.clear();
+
+        thumbImg.src = cnv.toDataURL('image/jpeg', 0.9);
+        thumbName.textContent = fileName;
+        const wasSquare = img.naturalWidth === img.naturalHeight;
+        thumbDims.textContent = wasSquare
+          ? `${img.naturalWidth} × ${img.naturalHeight}px — already square`
+          : `${img.naturalWidth} × ${img.naturalHeight}px — centre-cropped to square`;
+        thumbBox.style.display = 'flex';
+        scheduleUpdate();
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  /* ---------- cropped-per-aspect cache ---------- */
+  function getCroppedDataURL(w, h){
+    const key = w.toFixed(3) + 'x' + h.toFixed(3);
+    if (croppedCache.has(key)) return croppedCache.get(key);
+    const S = sourceCanvas.width;
+    const ar = w / h;
+    let cw, ch, cx, cy;
+    if (ar >= 1){ cw = S; ch = S / ar; cx = 0; cy = (S - ch) / 2; }
+    else { ch = S; cw = S * ar; cy = 0; cx = (S - cw) / 2; }
+    const cnv = document.createElement('canvas');
+    // keep reasonable output resolution regardless of crop
+    const scaleUp = 1200 / Math.max(cw, ch);
+    cnv.width = Math.round(cw * Math.max(1, scaleUp));
+    cnv.height = Math.round(ch * Math.max(1, scaleUp));
+    const ctx = cnv.getContext('2d');
+    ctx.drawImage(sourceCanvas, cx, cy, cw, ch, 0, 0, cnv.width, cnv.height);
+    const url = cnv.toDataURL('image/jpeg', 0.92);
+    croppedCache.set(key, url);
+    return url;
+  }
+
+  /* ---------- packing ---------- */
+  function getActiveItems(){
+    const items = [];
+    sizes.forEach(s => { if (s.enabled && s.qty > 0) for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id}); });
+    customSizes.forEach(s => { if (s.qty > 0) for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id}); });
+    // largest first -> tidier shelves
+    items.sort((a,b) => (b.h - a.h) || (b.w - a.w));
+    return items;
+  }
+
+  function getPaperDims(){
+    const p = PAPERS.find(x => x.id === paperSelect.value) || PAPERS[0];
+    const landscape = orientSelect.value === 'landscape';
+    return { w: landscape ? Math.max(p.w,p.h) : Math.min(p.w,p.h),
+             h: landscape ? Math.min(p.w,p.h) : Math.max(p.w,p.h) };
+  }
+
+  function packItems(items, paperW, paperH, margin, gap){
+    const pages = [];
+    let page = [];
+    let x = margin, y = margin, rowH = 0;
+    const usableW = paperW - margin*2;
+    const usableH = paperH - margin*2;
+
+    function newPage(){ if (page.length) pages.push(page); page = []; x = margin; y = margin; rowH = 0; }
+
+    for (const it of items){
+      if (it.w > usableW + 1e-6 || it.h > usableH + 1e-6) continue; // doesn't fit any page, skip
+      if (x + it.w > margin + usableW + 1e-6){
+        // wrap row
+        x = margin; y += rowH + gap; rowH = 0;
+      }
+      if (y + it.h > margin + usableH + 1e-6){
+        newPage();
+      }
+      page.push({x, y, w:it.w, h:it.h, key:it.key});
+      x += it.w + gap;
+      rowH = Math.max(rowH, it.h);
+    }
+    if (page.length) pages.push(page);
+    return pages;
+  }
+
+  /* ---------- preview (SVG) ---------- */
+  function buildSheetSVG(pageItems, paperW, paperH, pxPerIn){
+    const W = paperW * pxPerIn, H = paperH * pxPerIn;
+    const markLen = 7, markGap = 2;
+    let marks = '';
+    let rects = '';
+    pageItems.forEach(it => {
+      const x = it.x*pxPerIn, y = it.y*pxPerIn, w = it.w*pxPerIn, h = it.h*pxPerIn;
+      const uri = getCroppedDataURL(it.w, it.h);
+      rects += `<image href="${uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none"/>`;
+      rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#20201d" stroke-width="0.6"/>`;
+      const corners = [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]];
+      corners.forEach(([cx,cy,dx,dy]) => {
+        marks += `<path d="M${cx+dx*markGap},${cy} l${dx*markLen},0 M${cx},${cy+dy*markGap} l0,${dy*markLen}" stroke="#C6362E" stroke-width="0.7" />`;
+      });
+    });
+    return `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="${W}" height="${H}" fill="#FBFAF7"/>
+      ${rects}${marks}
+    </svg>`;
+  }
+
+  /* ---------- main update ---------- */
+  let updateHandle = null;
+  function scheduleUpdate(){
+    clearTimeout(updateHandle);
+    updateHandle = setTimeout(update, 60);
+  }
+
+  function update(){
+    const items = getActiveItems();
+    const totalRequested = items.length;
+    generateBtn.disabled = !(sourceCanvas && totalRequested > 0);
+
+    if (!sourceCanvas){
+      statusHint.textContent = 'Upload a square photo to begin. Each size is centre-cropped from your photo to fill its frame, then packed onto the sheet with cut marks at every corner.';
+    } else if (totalRequested === 0){
+      statusHint.textContent = 'Select at least one size and quantity to build the layout.';
+    }
+
+    pagesScroll.innerHTML = '';
+    countLabel.textContent = '';
+
+    if (!sourceCanvas || totalRequested === 0){
+      pagesScroll.appendChild(emptyState);
+      return;
+    }
+
+    const {w: paperW, h: paperH} = getPaperDims();
+    const margin = Math.max(0, parseFloat(marginInput.value) || 0);
+    const gap = Math.max(0, parseFloat(gapInput.value) || 0);
+    const pages = packItems(items, paperW, paperH, margin, gap);
+
+    const placed = pages.reduce((n,p) => n + p.length, 0);
+    const skipped = totalRequested - placed;
+    countLabel.innerHTML = `<b>${placed}</b> placed across <b>${pages.length}</b> page${pages.length===1?'':'s'}` + (skipped>0 ? ` — <span style="color:#C6362E">${skipped} skipped (too big for page)</span>` : '');
+
+    const maxPreviewW = Math.min(520, window.innerWidth - 380);
+    const pxPerIn = Math.max(38, Math.min(64, (maxPreviewW>0?maxPreviewW:340) / paperW));
+
+    pages.forEach((pageItems, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'sheet-wrap';
+      wrap.style.position = 'relative';
+      wrap.style.marginTop = '26px';
+      const label = document.createElement('div');
+      label.className = 'page-label';
+      label.textContent = `SHEET ${i+1} / ${pages.length} — ${paperW}×${paperH} in`;
+      wrap.appendChild(label);
+      wrap.insertAdjacentHTML('beforeend', buildSheetSVG(pageItems, paperW, paperH, pxPerIn));
+      pagesScroll.appendChild(wrap);
+    });
+  }
+
+  /* ---------- PDF generation ---------- */
+  generateBtn.addEventListener('click', () => {
+    if (!sourceCanvas) return;
+    const items = getActiveItems();
+    if (!items.length) return;
+
+    const {w: paperW, h: paperH} = getPaperDims();
+    const margin = Math.max(0, parseFloat(marginInput.value) || 0);
+    const gap = Math.max(0, parseFloat(gapInput.value) || 0);
+    const pages = packItems(items, paperW, paperH, margin, gap);
+
+    if (!pages.length) return;
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({
+      unit: 'in',
+      format: [paperW, paperH],
+      orientation: paperW > paperH ? 'landscape' : 'portrait'
+    });
+
+    const markLen = 0.1, markGap = 0.02;
+
+    pages.forEach((pageItems, pIdx) => {
+      if (pIdx > 0) doc.addPage([paperW, paperH], paperW > paperH ? 'landscape' : 'portrait');
+      doc.setDrawColor(198, 54, 46);
+      doc.setLineWidth(0.008);
+
+      pageItems.forEach(it => {
+        const uri = getCroppedDataURL(it.w, it.h);
+        doc.addImage(uri, 'JPEG', it.x, it.y, it.w, it.h, undefined, 'FAST');
+        doc.setDrawColor(32, 32, 29);
+        doc.setLineWidth(0.006);
+        doc.rect(it.x, it.y, it.w, it.h);
+
+        doc.setDrawColor(198, 54, 46);
+        doc.setLineWidth(0.008);
+        const corners = [
+          [it.x, it.y, 1, 1], [it.x+it.w, it.y, -1, 1],
+          [it.x, it.y+it.h, 1, -1], [it.x+it.w, it.y+it.h, -1, -1]
+        ];
+        corners.forEach(([cx,cy,dx,dy]) => {
+          doc.line(cx+dx*markGap, cy, cx+dx*(markGap+markLen), cy);
+          doc.line(cx, cy+dy*markGap, cx, cy+dy*(markGap+markLen));
+        });
+      });
+    });
+
+    doc.save('print-sheet.pdf');
+  });
+
+  window.addEventListener('resize', () => scheduleUpdate());
+  update();
+})();
+</script>
+</body>
+</html>
