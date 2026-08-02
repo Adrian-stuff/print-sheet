@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>RushID — ID & Passport Photo Layout Maker</title>
+<meta name="description" content="Upload one square photo and instantly lay out passport, visa, and ID photo sizes onto a printable sheet with cut marks. Free, private, runs entirely in your browser.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="RushID">
+<meta property="og:title" content="RushID — ID & Passport Photo Layout Maker">
+<meta property="og:description" content="Upload one square photo and instantly lay out passport, visa, and ID photo sizes onto a printable sheet with cut marks. Free, private, runs entirely in your browser.">
+<meta property="og:image" content="https://em-content.zobj.net/source/apple/391/framed-picture_1f5bc-fe0f.png">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="RushID — ID & Passport Photo Layout Maker">
+<meta name="twitter:description" content="Upload one square photo and instantly lay out passport, visa, and ID photo sizes onto a printable sheet with cut marks.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23C6362E'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' font-weight='bold' fill='%23FBFAF7' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -282,6 +292,77 @@
   .ad-slot.ad-slot--sidebar{
     border-bottom:none; border-top:1.5px dashed var(--line); margin-top:24px; padding:16px 0 0;
   }
+
+  /* Multi-photo list */
+  .photo-list{display:flex; flex-direction:column; gap:8px; margin-top:12px;}
+  .photo-thumb{
+    display:flex; align-items:center; gap:10px;
+    padding:8px;
+    border:1px solid var(--line);
+    background:var(--white);
+  }
+  .photo-thumb.active{border-color:var(--red);}
+  .photo-thumb img{
+    width:44px; height:44px; object-fit:cover;
+    border:1px solid var(--ink); cursor:pointer;
+  }
+  .photo-thumb .meta{font-family:var(--mono); font-size:11px; color:var(--ink-soft); line-height:1.5; flex:1; min-width:0;}
+  .photo-thumb .meta b{color:var(--ink); display:block; font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;}
+  .photo-thumb .pt-actions{display:flex; gap:8px; flex-shrink:0;}
+  .photo-thumb .pt-actions button{
+    background:none; border:none; color:var(--blue);
+    font-family:var(--mono); font-size:11px; cursor:pointer; text-decoration:underline;
+    padding:2px;
+  }
+  .photo-thumb .pt-actions button.remove{color:var(--red);}
+  .add-photo-btn{
+    width:100%; margin-top:8px;
+    font-family:var(--mono); font-size:12px; padding:9px 10px;
+    background:var(--white); color:var(--ink); border:1.5px dashed var(--ink); cursor:pointer;
+  }
+  .add-photo-btn:hover{border-color:var(--red); color:var(--red);}
+
+  .photo-select{
+    font-family:var(--mono); font-size:10.5px;
+    padding:3px 4px; border:1px solid var(--ink); background:var(--paper);
+    width:64px; max-width:64px;
+  }
+
+  /* Preset dropdown */
+  .preset-row{margin-bottom:10px;}
+
+  /* Crop modal */
+  .crop-overlay{
+    position:fixed; inset:0; background:rgba(32,31,29,.72);
+    display:flex; align-items:center; justify-content:center;
+    z-index:100; padding:20px;
+  }
+  .crop-modal{
+    background:var(--paper); border:2px solid var(--ink);
+    padding:20px; width:min(420px, 100%);
+    display:flex; flex-direction:column; gap:14px;
+  }
+  .crop-modal h2{
+    font-family:var(--display); font-size:16px; letter-spacing:.04em;
+    text-transform:uppercase; margin:0;
+  }
+  .crop-stage{
+    position:relative; width:100%; aspect-ratio:1/1; overflow:hidden;
+    background:var(--ink); border:1px solid var(--ink); cursor:grab; touch-action:none;
+  }
+  .crop-stage.dragging{cursor:grabbing;}
+  .crop-stage canvas{position:absolute; top:0; left:0; width:100%; height:100%;}
+  .crop-controls{display:flex; align-items:center; gap:10px;}
+  .crop-controls label{font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-shrink:0;}
+  .crop-controls input[type=range]{flex:1; accent-color:var(--red);}
+  .crop-actions{display:flex; gap:10px; justify-content:flex-end;}
+  .crop-actions button{
+    font-family:var(--mono); font-size:12px; padding:9px 14px; cursor:pointer; border:1.5px solid var(--ink);
+  }
+  .crop-actions .cancel-btn{background:var(--white); color:var(--ink);}
+  .crop-actions .save-btn{background:var(--ink); color:var(--white); border-color:var(--ink);}
+  .crop-actions .save-btn:hover{background:var(--blue); border-color:var(--blue);}
+  .crop-hint{font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); line-height:1.5;}
 </style>
 </head>
 <body>
@@ -309,20 +390,13 @@
   <div class="panel">
 
     <section class="block">
-      <p class="block-title"><span class="step-no">01</span> Upload photo</p>
+      <p class="block-title"><span class="step-no">01</span> Upload photo(s)</p>
       <div class="dropzone" id="dropzone" tabindex="0">
-        <input type="file" id="fileInput" accept="image/*" aria-label="Upload a square photo">
+        <input type="file" id="fileInput" accept="image/*" multiple aria-label="Upload one or more square photos">
         <div class="dz-icon">▣</div>
-        <div class="dz-text"><b>Click to upload</b> or drag a square image here<br>JPG or PNG, cropped to square automatically</div>
+        <div class="dz-text"><b>Click to upload</b> or drag images here<br>JPG or PNG, cropped to square automatically. Add several photos to mix them on one sheet.</div>
       </div>
-      <div class="preview-thumb" id="thumbBox" style="display:none;">
-        <img id="thumbImg" alt="Uploaded photo preview">
-        <div class="meta">
-          <b id="thumbName">photo.jpg</b>
-          <span id="thumbDims">— × —</span>
-        </div>
-        <button class="clear-btn" id="clearBtn" type="button">remove</button>
-      </div>
+      <div class="photo-list" id="photoList"></div>
     </section>
 
     <section class="block">
@@ -354,6 +428,12 @@
 
     <section class="block">
       <p class="block-title"><span class="step-no">03</span> Sizes to print</p>
+      <div class="preset-row">
+        <label class="field" for="presetSelect">ID preset (country / document)</label>
+        <select id="presetSelect">
+          <option value="">— choose a preset —</option>
+        </select>
+      </div>
       <div class="size-list" id="sizeList"></div>
       <div class="custom-row">
         <div class="field-sm">
@@ -403,6 +483,24 @@
   </div>
 </main>
 
+<div class="crop-overlay" id="cropOverlay" style="display:none;">
+  <div class="crop-modal">
+    <h2>Adjust crop</h2>
+    <div class="crop-stage" id="cropStage">
+      <canvas id="cropCanvas"></canvas>
+    </div>
+    <div class="crop-controls">
+      <label for="cropZoom">Zoom</label>
+      <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
+    </div>
+    <p class="crop-hint">Drag to reposition. Use the slider to zoom. The square area shown is exactly what gets printed.</p>
+    <div class="crop-actions">
+      <button class="cancel-btn" id="cropCancelBtn" type="button">Cancel</button>
+      <button class="save-btn" id="cropSaveBtn" type="button">Save crop</button>
+    </div>
+  </div>
+</div>
+
 <footer>RUSH ID — runs entirely in your browser. Nothing is uploaded anywhere.</footer>
 
 <script>
@@ -431,25 +529,44 @@
     {id:'5x7',  label:'5 × 7 in',    w:5,   h:7,   qty:0,  enabled:false, note:'5R'},
   ];
 
+  // Common ID/passport photo specs by country or document type. Reference only —
+  // always verify current requirements with the issuing authority before printing.
+  const ID_PRESETS = [
+    {id:'us-passport',      label:'US Passport / Visa — 2×2 in',            w:2,     h:2},
+    {id:'uk-passport',      label:'UK / Ireland Passport — 35×45 mm',       w:1.378, h:1.772},
+    {id:'schengen-visa',    label:'Schengen Visa (EU) — 35×45 mm',          w:1.378, h:1.772},
+    {id:'india-passport',   label:'India Passport — 51×51 mm (2×2 in)',     w:2,     h:2},
+    {id:'india-pan',        label:'India PAN Card — 25×35 mm',              w:0.984, h:1.378},
+    {id:'china-visa',       label:'China Visa — 33×48 mm',                  w:1.299, h:1.89},
+    {id:'canada-passport',  label:'Canada Passport — 50×70 mm',             w:1.969, h:2.756},
+    {id:'japan-visa',       label:'Japan Visa / Residence Card — 35×45 mm', w:1.378, h:1.772},
+    {id:'australia-passport',label:'Australia Passport — 35×45 mm',        w:1.378, h:1.772},
+    {id:'south-korea-visa', label:'South Korea Visa — 35×45 mm',            w:1.378, h:1.772},
+  ];
+
+  const SETTINGS_KEY = 'rushid-settings-v1';
+
+  function uid(prefix){ return prefix + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2,7); }
+
   /* ---------- state ---------- */
-  let sourceCanvas = null;   // squared, cropped source image canvas
-  let fileName = '';
-  let sizes = DEFAULT_SIZES.map(s => ({...s}));
-  let customSizes = []; // {id,label,w,h,qty,enabled:true}
-  const croppedCache = new Map(); // key "wxh" -> dataURL
+  let photos = [];        // {id, name, img, zoom, offsetX, offsetY, canvas}
+  let sizes = DEFAULT_SIZES.map(s => ({...s, photoId:null}));
+  let customSizes = []; // {id,w,h,qty,note,photoId}
+  const croppedCache = new Map(); // key "photoId|wxh" -> dataURL
+  let cropEditingPhoto = null;
+  let cropBackup = null;
+  let cropDragging = false;
+  let cropDragStart = null;
 
   /* ---------- elements ---------- */
   const dropzone = document.getElementById('dropzone');
   const fileInput = document.getElementById('fileInput');
-  const thumbBox = document.getElementById('thumbBox');
-  const thumbImg = document.getElementById('thumbImg');
-  const thumbName = document.getElementById('thumbName');
-  const thumbDims = document.getElementById('thumbDims');
-  const clearBtn = document.getElementById('clearBtn');
+  const photoListEl = document.getElementById('photoList');
   const paperSelect = document.getElementById('paperSelect');
   const orientSelect = document.getElementById('orientSelect');
   const marginInput = document.getElementById('marginInput');
   const gapInput = document.getElementById('gapInput');
+  const presetSelect = document.getElementById('presetSelect');
   const sizeListEl = document.getElementById('sizeList');
   const customListEl = document.getElementById('customList');
   const customW = document.getElementById('customW');
@@ -461,6 +578,12 @@
   const pagesScroll = document.getElementById('pagesScroll');
   const emptyState = document.getElementById('emptyState');
   const countLabel = document.getElementById('countLabel');
+  const cropOverlay = document.getElementById('cropOverlay');
+  const cropStage = document.getElementById('cropStage');
+  const cropCanvas = document.getElementById('cropCanvas');
+  const cropZoom = document.getElementById('cropZoom');
+  const cropCancelBtn = document.getElementById('cropCancelBtn');
+  const cropSaveBtn = document.getElementById('cropSaveBtn');
 
   /* ---------- init selects ---------- */
   PAPERS.forEach(p => {
@@ -470,11 +593,64 @@
   });
   paperSelect.value = 'letter';
 
+  ID_PRESETS.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id; opt.textContent = p.label;
+    presetSelect.appendChild(opt);
+  });
+
+  /* ---------- settings persistence ---------- */
+  function saveSettings(){
+    const data = {
+      paper: paperSelect.value,
+      orient: orientSelect.value,
+      margin: marginInput.value,
+      gap: gapInput.value,
+      sizes: sizes.map(s => ({id:s.id, enabled:s.enabled, qty:s.qty})),
+      customSizes: customSizes.map(s => ({w:s.w, h:s.h, qty:s.qty, note:s.note})),
+    };
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); }catch(e){}
+  }
+
+  function loadSettings(){
+    let data;
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if (!raw) return;
+      data = JSON.parse(raw);
+    }catch(e){ return; }
+    if (data.paper) paperSelect.value = data.paper;
+    if (data.orient) orientSelect.value = data.orient;
+    if (data.margin !== undefined) marginInput.value = data.margin;
+    if (data.gap !== undefined) gapInput.value = data.gap;
+    if (Array.isArray(data.sizes)){
+      data.sizes.forEach(saved => {
+        const s = sizes.find(x => x.id === saved.id);
+        if (s){ s.enabled = !!saved.enabled; s.qty = Math.max(0, parseInt(saved.qty, 10) || 0); }
+      });
+    }
+    if (Array.isArray(data.customSizes)){
+      customSizes = data.customSizes
+        .filter(s => s.w > 0 && s.h > 0)
+        .map(s => ({id:uid('custom'), w:s.w, h:s.h, qty:Math.max(1, parseInt(s.qty,10) || 1), note:s.note || '', photoId:null}));
+    }
+  }
+  loadSettings();
+
+  /* ---------- size / photo resolution ---------- */
+  function resolvePhotoId(s){
+    if (s.photoId && photos.some(p => p.id === s.photoId)) return s.photoId;
+    return photos[0] ? photos[0].id : null;
+  }
+
   function renderSizeList(){
     sizeListEl.innerHTML = '';
     sizes.forEach((s, idx) => {
       const row = document.createElement('div');
       row.className = 'size-row';
+      const photoCell = photos.length > 1
+        ? `<select class="photo-select size-photo" data-idx="${idx}" aria-label="Photo for ${s.label}">${photos.map((p,i) => `<option value="${p.id}" ${resolvePhotoId(s)===p.id?'selected':''}>Photo ${i+1}</option>`).join('')}</select>`
+        : '<span></span>';
       row.innerHTML = `
         <input type="checkbox" data-idx="${idx}" class="size-check" ${s.enabled ? 'checked' : ''} aria-label="Include ${s.label}">
         <span>
@@ -482,7 +658,7 @@
           <span class="sdim">${s.note}</span>
         </span>
         <input type="number" class="qty-input size-qty" data-idx="${idx}" min="0" max="60" value="${s.qty}" aria-label="Quantity for ${s.label}">
-        <span></span>
+        ${photoCell}
       `;
       sizeListEl.appendChild(row);
     });
@@ -494,10 +670,15 @@
     customSizes.forEach((s, idx) => {
       const chip = document.createElement('div');
       chip.className = 'custom-chip';
-      chip.innerHTML = `<span>${s.w}×${s.h} in — qty ${s.qty}</span><button data-idx="${idx}" type="button">remove</button>`;
+      const label = `${s.note ? s.note + ' — ' : ''}${s.w.toFixed(2)}×${s.h.toFixed(2)} in — qty ${s.qty}`;
+      const photoCell = photos.length > 1
+        ? `<select class="photo-select custom-photo" data-idx="${idx}" aria-label="Photo for this size">${photos.map((p,i) => `<option value="${p.id}" ${resolvePhotoId(s)===p.id?'selected':''}>Photo ${i+1}</option>`).join('')}</select>`
+        : '';
+      chip.innerHTML = `<span>${label}</span>${photoCell}<button data-idx="${idx}" type="button">remove</button>`;
       customListEl.appendChild(chip);
     });
   }
+  renderCustomList();
 
   /* ---------- events: sizes ---------- */
   sizeListEl.addEventListener('change', (e) => {
@@ -507,6 +688,8 @@
       sizes[idx].enabled = e.target.checked;
     } else if (e.target.classList.contains('size-qty')){
       sizes[idx].qty = Math.max(0, parseInt(e.target.value || '0', 10));
+    } else if (e.target.classList.contains('size-photo')){
+      sizes[idx].photoId = e.target.value;
     }
     scheduleUpdate();
   });
@@ -514,7 +697,7 @@
   addCustomBtn.addEventListener('click', () => {
     const w = parseFloat(customW.value), h = parseFloat(customH.value), qty = parseInt(customQty.value, 10);
     if (!w || !h || !qty || w <= 0 || h <= 0 || qty <= 0) return;
-    customSizes.push({id:'custom-'+Date.now(), w, h, qty, enabled:true});
+    customSizes.push({id:uid('custom'), w, h, qty, note:'', photoId:null});
     renderCustomList();
     scheduleUpdate();
   });
@@ -527,66 +710,209 @@
     scheduleUpdate();
   });
 
+  customListEl.addEventListener('change', (e) => {
+    if (!e.target.classList.contains('custom-photo')) return;
+    const idx = parseInt(e.target.dataset.idx, 10);
+    customSizes[idx].photoId = e.target.value;
+    scheduleUpdate();
+  });
+
+  presetSelect.addEventListener('change', () => {
+    const id = presetSelect.value;
+    presetSelect.value = '';
+    if (!id) return;
+    const preset = ID_PRESETS.find(p => p.id === id);
+    if (!preset) return;
+    const exists = customSizes.some(s => Math.abs(s.w - preset.w) < 0.005 && Math.abs(s.h - preset.h) < 0.005);
+    if (exists) return;
+    customSizes.push({id:uid('custom'), w:preset.w, h:preset.h, qty:6, note:preset.label.split('—')[0].trim(), photoId:null});
+    renderCustomList();
+    scheduleUpdate();
+  });
+
   [paperSelect, orientSelect, marginInput, gapInput].forEach(el => {
     el.addEventListener('change', scheduleUpdate);
     el.addEventListener('input', scheduleUpdate);
   });
 
-  /* ---------- upload + center-crop to square ---------- */
+  /* ---------- crop math ---------- */
+  function clampCropState(photo){
+    const iw = photo.img.naturalWidth, ih = photo.img.naturalHeight;
+    const baseSide = Math.min(iw, ih);
+    const side = baseSide / photo.zoom;
+    const maxOffX = Math.max(0, (iw - side) / 2);
+    const maxOffY = Math.max(0, (ih - side) / 2);
+    photo.offsetX = Math.max(-maxOffX, Math.min(maxOffX, photo.offsetX));
+    photo.offsetY = Math.max(-maxOffY, Math.min(maxOffY, photo.offsetY));
+    const cx = iw / 2 + photo.offsetX, cy = ih / 2 + photo.offsetY;
+    return { sx: cx - side / 2, sy: cy - side / 2, side };
+  }
+
+  function renderMasterCanvas(photo){
+    const { sx, sy, side } = clampCropState(photo);
+    const outSide = Math.min(1600, Math.max(600, Math.round(side)));
+    const cnv = document.createElement('canvas');
+    cnv.width = outSide; cnv.height = outSide;
+    const ctx = cnv.getContext('2d');
+    ctx.drawImage(photo.img, sx, sy, side, side, 0, 0, outSide, outSide);
+    photo.canvas = cnv;
+  }
+
+  function clearPhotoCache(photoId){
+    const prefix = photoId + '|';
+    for (const k of Array.from(croppedCache.keys())) if (k.startsWith(prefix)) croppedCache.delete(k);
+  }
+
+  /* ---------- multi-photo upload ---------- */
   dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
   dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
   dropzone.addEventListener('drop', e => {
     e.preventDefault(); dropzone.classList.remove('drag');
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files && e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
   });
   fileInput.addEventListener('change', e => {
-    if (e.target.files && e.target.files[0]) handleFile(e.target.files[0]);
-  });
-  clearBtn.addEventListener('click', () => {
-    sourceCanvas = null; fileName = '';
-    croppedCache.clear();
-    thumbBox.style.display = 'none';
+    if (e.target.files && e.target.files.length) handleFiles(e.target.files);
     fileInput.value = '';
-    scheduleUpdate();
   });
 
-  function handleFile(file){
-    if (!file.type.startsWith('image/')) return;
-    fileName = file.name;
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const img = new Image();
-      img.onload = () => {
-        const side = Math.min(img.naturalWidth, img.naturalHeight);
-        const sx = (img.naturalWidth - side) / 2;
-        const sy = (img.naturalHeight - side) / 2;
-        const outSide = Math.min(1600, Math.max(600, side));
-        const cnv = document.createElement('canvas');
-        cnv.width = outSide; cnv.height = outSide;
-        const ctx = cnv.getContext('2d');
-        ctx.drawImage(img, sx, sy, side, side, 0, 0, outSide, outSide);
-        sourceCanvas = cnv;
-        croppedCache.clear();
-
-        thumbImg.src = cnv.toDataURL('image/jpeg', 0.9);
-        thumbName.textContent = fileName;
-        const wasSquare = img.naturalWidth === img.naturalHeight;
-        thumbDims.textContent = wasSquare
-          ? `${img.naturalWidth} × ${img.naturalHeight}px — already square`
-          : `${img.naturalWidth} × ${img.naturalHeight}px — centre-cropped to square`;
-        thumbBox.style.display = 'flex';
-        scheduleUpdate();
+  function handleFiles(fileList){
+    Array.from(fileList).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const photo = { id: uid('photo'), name: file.name, img, zoom: 1, offsetX: 0, offsetY: 0, canvas: null };
+          renderMasterCanvas(photo);
+          photos.push(photo);
+          renderPhotoList();
+          renderSizeList();
+          renderCustomList();
+          scheduleUpdate();
+        };
+        img.src = ev.target.result;
       };
-      img.src = ev.target.result;
-    };
-    reader.readAsDataURL(file);
+      reader.readAsDataURL(file);
+    });
   }
 
+  function renderPhotoList(){
+    photoListEl.innerHTML = '';
+    photos.forEach(photo => {
+      const row = document.createElement('div');
+      row.className = 'photo-thumb';
+      const dims = `${photo.img.naturalWidth} × ${photo.img.naturalHeight}px`;
+      row.innerHTML = `
+        <img src="${photo.canvas.toDataURL('image/jpeg', 0.85)}" alt="${photo.name} preview" class="pt-open" data-id="${photo.id}">
+        <div class="meta"><b>${photo.name}</b><span>${dims}</span></div>
+        <div class="pt-actions">
+          <button type="button" class="pt-adjust" data-id="${photo.id}">adjust crop</button>
+          <button type="button" class="remove pt-remove" data-id="${photo.id}">remove</button>
+        </div>
+      `;
+      photoListEl.appendChild(row);
+    });
+  }
+  renderPhotoList();
+
+  photoListEl.addEventListener('click', (e) => {
+    const removeBtn = e.target.closest('.pt-remove');
+    if (removeBtn){
+      const id = removeBtn.dataset.id;
+      photos = photos.filter(p => p.id !== id);
+      clearPhotoCache(id);
+      sizes.forEach(s => { if (s.photoId === id) s.photoId = null; });
+      customSizes.forEach(s => { if (s.photoId === id) s.photoId = null; });
+      renderPhotoList();
+      renderSizeList();
+      renderCustomList();
+      scheduleUpdate();
+      return;
+    }
+    const openTarget = e.target.closest('.pt-adjust') || e.target.closest('.pt-open');
+    if (openTarget){
+      const photo = photos.find(p => p.id === openTarget.dataset.id);
+      if (photo) openCropEditor(photo);
+    }
+  });
+
+  /* ---------- crop editor modal ---------- */
+  function openCropEditor(photo){
+    cropEditingPhoto = photo;
+    cropBackup = { zoom: photo.zoom, offsetX: photo.offsetX, offsetY: photo.offsetY };
+    cropZoom.value = photo.zoom;
+    cropOverlay.style.display = 'flex';
+    drawCropPreview();
+  }
+
+  function closeCropEditor(){
+    cropOverlay.style.display = 'none';
+    cropEditingPhoto = null;
+    cropBackup = null;
+  }
+
+  function drawCropPreview(){
+    const photo = cropEditingPhoto;
+    if (!photo) return;
+    const rect = cropStage.getBoundingClientRect();
+    const size = Math.round(rect.width) || 400;
+    cropCanvas.width = size; cropCanvas.height = size;
+    const ctx = cropCanvas.getContext('2d');
+    const { sx, sy, side } = clampCropState(photo);
+    ctx.clearRect(0, 0, size, size);
+    ctx.drawImage(photo.img, sx, sy, side, side, 0, 0, size, size);
+  }
+
+  cropZoom.addEventListener('input', () => {
+    if (!cropEditingPhoto) return;
+    cropEditingPhoto.zoom = parseFloat(cropZoom.value);
+    drawCropPreview();
+  });
+
+  cropStage.addEventListener('pointerdown', (e) => {
+    if (!cropEditingPhoto) return;
+    cropDragging = true;
+    cropStage.classList.add('dragging');
+    cropDragStart = { x: e.clientX, y: e.clientY, offsetX: cropEditingPhoto.offsetX, offsetY: cropEditingPhoto.offsetY };
+    cropStage.setPointerCapture(e.pointerId);
+  });
+  cropStage.addEventListener('pointermove', (e) => {
+    if (!cropDragging || !cropEditingPhoto) return;
+    const rect = cropStage.getBoundingClientRect();
+    const { side } = clampCropState(cropEditingPhoto);
+    const factor = side / rect.width;
+    const dx = e.clientX - cropDragStart.x;
+    const dy = e.clientY - cropDragStart.y;
+    cropEditingPhoto.offsetX = cropDragStart.offsetX - dx * factor;
+    cropEditingPhoto.offsetY = cropDragStart.offsetY - dy * factor;
+    drawCropPreview();
+  });
+  function endCropDrag(){ cropDragging = false; cropStage.classList.remove('dragging'); }
+  cropStage.addEventListener('pointerup', endCropDrag);
+  cropStage.addEventListener('pointercancel', endCropDrag);
+
+  cropCancelBtn.addEventListener('click', () => {
+    if (cropEditingPhoto && cropBackup) Object.assign(cropEditingPhoto, cropBackup);
+    closeCropEditor();
+  });
+
+  cropSaveBtn.addEventListener('click', () => {
+    if (cropEditingPhoto){
+      renderMasterCanvas(cropEditingPhoto);
+      clearPhotoCache(cropEditingPhoto.id);
+      renderPhotoList();
+      scheduleUpdate();
+    }
+    closeCropEditor();
+  });
+
   /* ---------- cropped-per-aspect cache ---------- */
-  function getCroppedDataURL(w, h){
-    const key = w.toFixed(3) + 'x' + h.toFixed(3);
+  function getCroppedDataURL(photoId, w, h){
+    const photo = photos.find(p => p.id === photoId) || photos[0];
+    if (!photo) return '';
+    const key = photo.id + '|' + w.toFixed(3) + 'x' + h.toFixed(3);
     if (croppedCache.has(key)) return croppedCache.get(key);
-    const S = sourceCanvas.width;
+    const S = photo.canvas.width;
     const ar = w / h;
     let cw, ch, cx, cy;
     if (ar >= 1){ cw = S; ch = S / ar; cx = 0; cy = (S - ch) / 2; }
@@ -597,7 +923,7 @@
     cnv.width = Math.round(cw * Math.max(1, scaleUp));
     cnv.height = Math.round(ch * Math.max(1, scaleUp));
     const ctx = cnv.getContext('2d');
-    ctx.drawImage(sourceCanvas, cx, cy, cw, ch, 0, 0, cnv.width, cnv.height);
+    ctx.drawImage(photo.canvas, cx, cy, cw, ch, 0, 0, cnv.width, cnv.height);
     const url = cnv.toDataURL('image/jpeg', 0.92);
     croppedCache.set(key, url);
     return url;
@@ -606,8 +932,8 @@
   /* ---------- packing ---------- */
   function getActiveItems(){
     const items = [];
-    sizes.forEach(s => { if (s.enabled && s.qty > 0) for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id}); });
-    customSizes.forEach(s => { if (s.qty > 0) for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id}); });
+    sizes.forEach(s => { if (s.enabled && s.qty > 0){ const photoId = resolvePhotoId(s); for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id, photoId}); } });
+    customSizes.forEach(s => { if (s.qty > 0){ const photoId = resolvePhotoId(s); for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id, photoId}); } });
     // largest first -> tidier shelves
     items.sort((a,b) => (b.h - a.h) || (b.w - a.w));
     return items;
@@ -638,7 +964,7 @@
       if (y + it.h > margin + usableH + 1e-6){
         newPage();
       }
-      page.push({x, y, w:it.w, h:it.h, key:it.key});
+      page.push({x, y, w:it.w, h:it.h, key:it.key, photoId:it.photoId});
       x += it.w + gap;
       rowH = Math.max(rowH, it.h);
     }
@@ -654,7 +980,7 @@
     let rects = '';
     pageItems.forEach(it => {
       const x = it.x*pxPerIn, y = it.y*pxPerIn, w = it.w*pxPerIn, h = it.h*pxPerIn;
-      const uri = getCroppedDataURL(it.w, it.h);
+      const uri = getCroppedDataURL(it.photoId, it.w, it.h);
       rects += `<image href="${uri}" x="${x}" y="${y}" width="${w}" height="${h}" preserveAspectRatio="none"/>`;
       rects += `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="none" stroke="#20201d" stroke-width="0.6"/>`;
       const corners = [[x,y,1,1],[x+w,y,-1,1],[x,y+h,1,-1],[x+w,y+h,-1,-1]];
@@ -676,20 +1002,24 @@
   }
 
   function update(){
+    saveSettings();
     const items = getActiveItems();
     const totalRequested = items.length;
-    generateBtn.disabled = !(sourceCanvas && totalRequested > 0);
+    const hasPhotos = photos.length > 0;
+    generateBtn.disabled = !(hasPhotos && totalRequested > 0);
 
-    if (!sourceCanvas){
-      statusHint.textContent = 'Upload a square photo to begin. Each size is centre-cropped from your photo to fill its frame, then packed onto the sheet with cut marks at every corner.';
+    if (!hasPhotos){
+      statusHint.textContent = 'Upload at least one square photo to begin. Each size is centre-cropped to fill its frame, then packed onto the sheet with cut marks at every corner. Upload several photos to mix them across sizes.';
     } else if (totalRequested === 0){
       statusHint.textContent = 'Select at least one size and quantity to build the layout.';
+    } else {
+      statusHint.textContent = 'Each size is centre-cropped to fill its frame, then packed onto the sheet with cut marks at every corner.';
     }
 
     pagesScroll.innerHTML = '';
     countLabel.textContent = '';
 
-    if (!sourceCanvas || totalRequested === 0){
+    if (!hasPhotos || totalRequested === 0){
       pagesScroll.appendChild(emptyState);
       return;
     }
@@ -722,7 +1052,7 @@
 
   /* ---------- PDF generation ---------- */
   generateBtn.addEventListener('click', () => {
-    if (!sourceCanvas) return;
+    if (!photos.length) return;
     const items = getActiveItems();
     if (!items.length) return;
 
@@ -748,7 +1078,7 @@
       doc.setLineWidth(0.008);
 
       pageItems.forEach(it => {
-        const uri = getCroppedDataURL(it.w, it.h);
+        const uri = getCroppedDataURL(it.photoId, it.w, it.h);
         doc.addImage(uri, 'JPEG', it.x, it.y, it.w, it.h, undefined, 'FAST');
         doc.setDrawColor(32, 32, 29);
         doc.setLineWidth(0.006);
@@ -767,7 +1097,7 @@
       });
     });
 
-    doc.save('print-sheet.pdf');
+    doc.save('rushid-print-sheet.pdf');
   });
 
   window.addEventListener('resize', () => scheduleUpdate());
