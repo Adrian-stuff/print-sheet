@@ -1,4 +1,4 @@
-# Print Sheet
+# RushID
 
 **ID & Passport Photo Layout Maker** — one square photo, cropped, sized, and laid out with cut marks on your paper of choice. Runs entirely in your browser. Nothing is uploaded anywhere.
 
