@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>About — RushID</title>
+<meta name="description" content="About RushID: a free, browser-only tool that lays out passport, visa, and ID photo sizes onto a printable sheet with cut marks.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' fill='%23C6362E'/%3E%3Ctext x='32' y='45' font-family='Georgia,serif' font-size='38' font-weight='bold' fill='%23FBFAF7' text-anchor='middle'%3ER%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#EDEAE2; --paper-2:#E3DFD3; --ink:#201F1D; --ink-soft:#54514A;
+    --line:#C9C3B4; --red:#C6362E; --blue:#33546E; --white:#FBFAF7;
+    --mono:'IBM Plex Mono', monospace; --display:'Oswald', sans-serif; --body:'Inter', sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper); color:var(--ink); font-family:var(--body); min-height:100vh;
+    background-image:linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size:32px 32px; background-position:-1px -1px;
+  }
+  header.site{
+    padding:28px clamp(16px,4vw,48px) 18px; border-bottom:2px solid var(--ink);
+    display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap;
+  }
+  .brand{display:flex; align-items:baseline; gap:12px;}
+  .brand .mark{
+    font-family:var(--mono); font-size:12px; letter-spacing:.12em; color:var(--red);
+    border:1.5px solid var(--red); padding:2px 6px; transform:translateY(-4px);
+  }
+  .brand a{ text-decoration:none; color:inherit; display:flex; align-items:baseline; gap:12px; }
+  h1{
+    font-family:var(--display); font-weight:700; font-size:clamp(26px,4vw,38px);
+    letter-spacing:.01em; margin:0; text-transform:uppercase;
+  }
+  .tagline{font-family:var(--mono); font-size:12.5px; color:var(--ink-soft); max-width:340px; text-align:right; line-height:1.5;}
+
+  main{max-width:760px; margin:0 auto; padding:clamp(28px,5vw,56px) clamp(16px,4vw,48px);}
+  main h2{
+    font-family:var(--display); font-weight:600; font-size:clamp(19px,2.4vw,24px);
+    text-transform:uppercase; letter-spacing:.03em; margin:0 0 14px;
+  }
+  main h2:not(:first-child){margin-top:36px;}
+  main p{font-size:14.5px; line-height:1.7; color:var(--ink-soft); margin:0 0 12px;}
+  main ul{margin:0 0 12px; padding-left:20px; font-size:14.5px; line-height:1.7; color:var(--ink-soft);}
+  main strong{color:var(--ink);}
+  main a{color:var(--blue);}
+  .back-link{font-family:var(--mono); font-size:12px; color:var(--ink-soft); text-decoration:underline;}
+
+  footer{
+    text-align:center; padding:24px 18px; font-family:var(--mono); font-size:11px; color:var(--ink-soft);
+    border-top:2px solid var(--ink);
+  }
+  footer p{margin:0 0 10px;}
+  .footer-nav{display:flex; justify-content:center; gap:14px; flex-wrap:wrap;}
+  .footer-nav a{color:var(--ink-soft); text-decoration:underline;}
+  .footer-nav a:hover{color:var(--red);}
+</style>
+</head>
+<body>
+
+<header class="site">
+  <div class="brand">
+    <a href="index.html"><span class="mark">01 / 01</span><h1>Rush&nbsp;ID</h1></a>
+  </div>
+  <div class="tagline">ONE SQUARE PHOTO → CROPPED, SIZED, AND<br>LAID OUT WITH CUT MARKS ON YOUR PAPER OF CHOICE.</div>
+</header>
+
+<main>
+  <p class="back-link">&larr; <a href="index.html">Back to the tool</a></p>
+
+  <h2>About RushID</h2>
+  <p>RushID is a small, free tool for one specific chore: turning a single square photo into a full sheet of correctly-sized ID, passport, and visa prints, ready to cut apart and hand to whoever needs them. It exists because getting a handful of passport-sized photos usually means a trip to a photo counter, a paid print run, and a wait — for something that's really just a crop and a print layout problem.</p>
+  <p>The tool runs entirely as JavaScript in your browser. There's no server-side upload, no account, and no processing pipeline you can't see: your photo is read locally, cropped locally, arranged on a virtual sheet locally, and exported to a PDF locally. Nothing about your image is transmitted anywhere as part of using RushID.</p>
+
+  <h2>Why It's Free</h2>
+  <p>RushID doesn't charge for use and doesn't require sign-up. The site is supported by advertising, which covers hosting and ongoing development. There is no premium tier, paywall, or usage limit.</p>
+
+  <h2>Get in Touch</h2>
+  <p>Questions, bug reports, or suggestions for additional ID/passport presets are welcome at <a href="mailto:mobhometech@gmail.com">mobhometech@gmail.com</a>.</p>
+</main>
+
+<footer>
+  <p>RUSH ID — runs entirely in your browser. Nothing is uploaded anywhere.</p>
+  <nav class="footer-nav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="mailto:mobhometech@gmail.com">Contact</a>
+  </nav>
+</footer>
+
+</body>
+</html>

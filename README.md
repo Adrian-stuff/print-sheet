@@ -30,4 +30,7 @@ None — everything runs in a modern browser. The only external dependency is [j
 
 ## Files
 
-- `index.html` — single-file app containing all HTML, CSS, and JavaScript.
+- `index.html` — single-file app containing all HTML, CSS, and JavaScript, plus homepage content (how it works, supported sizes, FAQ) and a footer linking to the pages below.
+- `about.html` — about/contact page.
+- `privacy.html` — privacy policy (local-only processing, local storage, AdSense/cookies disclosure).
+- `ads.txt` — Google AdSense authorized-sellers file.

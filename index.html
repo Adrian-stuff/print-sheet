@@ -276,11 +276,6 @@
   .empty-state .big{font-family:var(--display); font-size:20px; color:var(--ink); text-transform:uppercase; letter-spacing:.05em;}
   .ruler-mark{width:1px; height:24px; background:var(--line); margin:0 auto;}
 
-  footer{
-    text-align:center; padding:18px; font-family:var(--mono); font-size:11px; color:var(--ink-soft);
-    border-top:2px solid var(--ink);
-  }
-
   .ad-slot{
     padding:14px clamp(16px,4vw,48px);
     border-bottom:2px solid var(--ink);
@@ -370,6 +365,34 @@
   .crop-actions .save-btn{background:var(--ink); color:var(--white); border-color:var(--ink);}
   .crop-actions .save-btn:hover{background:var(--blue); border-color:var(--blue);}
   .crop-hint{font-family:var(--mono); font-size:10.5px; color:var(--ink-soft); line-height:1.5;}
+
+  /* Content / SEO / AdSense-review sections */
+  .content-section{
+    border-top:2px solid var(--ink);
+    padding:clamp(28px,5vw,56px) clamp(16px,4vw,48px);
+  }
+  .content-section.alt{background:var(--paper-2);}
+  .content-wrap{max-width:760px; margin:0 auto;}
+  .content-wrap h2{
+    font-family:var(--display); font-weight:600; font-size:clamp(19px,2.4vw,24px);
+    text-transform:uppercase; letter-spacing:.03em; margin:0 0 14px;
+  }
+  .content-wrap > h2:not(:first-child){margin-top:36px;}
+  .content-wrap p{font-size:14.5px; line-height:1.7; color:var(--ink-soft); margin:0 0 12px;}
+  .content-wrap ul{margin:0 0 12px; padding-left:20px; font-size:14.5px; line-height:1.7; color:var(--ink-soft);}
+  .content-wrap strong{color:var(--ink);}
+  .faq-item{margin-bottom:16px;}
+  .faq-item dt{font-weight:600; color:var(--ink); font-size:14.5px; margin-bottom:4px;}
+  .faq-item dd{margin:0; font-size:14.5px; line-height:1.7; color:var(--ink-soft);}
+
+  footer{
+    text-align:center; padding:24px 18px; font-family:var(--mono); font-size:11px; color:var(--ink-soft);
+    border-top:2px solid var(--ink);
+  }
+  footer p{margin:0 0 10px;}
+  .footer-nav{display:flex; justify-content:center; gap:14px; flex-wrap:wrap;}
+  .footer-nav a{color:var(--ink-soft); text-decoration:underline;}
+  .footer-nav a:hover{color:var(--red);}
 </style>
 </head>
 <body>
@@ -508,7 +531,47 @@
   </div>
 </div>
 
-<footer>RUSH ID — runs entirely in your browser. Nothing is uploaded anywhere.</footer>
+<section class="content-section">
+  <div class="content-wrap">
+    <h2>How RushID Works</h2>
+    <p>RushID turns a single square photo into a full sheet of correctly-sized ID and passport prints, without ever leaving your browser. Upload a photo, choose the sizes you need — from a built-in country preset or a custom width and height — and RushID centre-crops your photo to fill each frame exactly. Every print is arranged on your chosen paper size with thin cut marks at the corners, so a pair of scissors or a paper trimmer is all you need to separate them cleanly.</p>
+    <p>Because everything runs as JavaScript in your own browser, your photo is never uploaded to a server. Cropping, layout, and PDF generation all happen locally on your device, and the finished file goes straight to your downloads folder.</p>
+
+    <h2>Supported ID &amp; Passport Photo Sizes</h2>
+    <p>RushID ships with ready-made presets for some of the most commonly requested document photo sizes, including <strong>US Passport &amp; Visa (2×2 in)</strong>, <strong>UK &amp; Ireland Passport (35×45 mm)</strong>, <strong>Schengen Visa</strong>, <strong>India Passport &amp; PAN Card</strong>, <strong>China Visa</strong>, <strong>Canada Passport</strong>, <strong>Japan Visa &amp; Residence Card</strong>, <strong>Australia Passport</strong>, and <strong>South Korea Visa</strong>. Standard studio sizes like 1×1, 2×2, 2×3, wallet (2.5×3.5), 3×4, 3.5×4.5, 4×6, and 5×7 inches are built in as well, and you can add any custom width, height, and quantity on top of those.</p>
+    <p>These presets are provided for convenience and reference only — document photo requirements change over time, so always confirm the current spec with the passport office, embassy, or agency you're submitting to before printing.</p>
+
+    <h2>Frequently Asked Questions</h2>
+    <dl>
+      <div class="faq-item">
+        <dt>Is my photo uploaded anywhere?</dt>
+        <dd>No. RushID processes everything — cropping, layout, and PDF export — locally in your browser. Your photo never leaves your device.</dd>
+      </div>
+      <div class="faq-item">
+        <dt>Can I print photos of more than one person on the same sheet?</dt>
+        <dd>Yes. Upload multiple photos and assign each size its own quantity per photo, so you can mix several people or portraits onto one print sheet.</dd>
+      </div>
+      <div class="faq-item">
+        <dt>What paper sizes does RushID support?</dt>
+        <dd>Letter, Legal, A4, A5, 4R, 5R, and 8R, in either portrait or landscape orientation, with adjustable margins and cut gaps.</dd>
+      </div>
+      <div class="faq-item">
+        <dt>Is RushID free to use?</dt>
+        <dd>Yes, RushID is free with no account or sign-up required. The site is supported by advertising.</dd>
+      </div>
+    </dl>
+  </div>
+</section>
+
+<footer>
+  <p>RUSH ID — runs entirely in your browser. Nothing is uploaded anywhere.</p>
+  <nav class="footer-nav">
+    <a href="index.html">Home</a>
+    <a href="about.html">About</a>
+    <a href="privacy.html">Privacy Policy</a>
+    <a href="mailto:mobhometech@gmail.com">Contact</a>
+  </nav>
+</footer>
 
 <script>
 (function(){
