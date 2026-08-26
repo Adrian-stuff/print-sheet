@@ -184,7 +184,7 @@
   .size-list{border:1px solid var(--line); background:var(--white);}
   .size-row{
     display:grid;
-    grid-template-columns:22px 1fr auto auto;
+    grid-template-columns:22px 1fr auto;
     align-items:center;
     gap:10px;
     padding:9px 10px;
@@ -214,10 +214,12 @@
 
   .custom-list{margin-top:8px; display:flex; flex-direction:column; gap:6px;}
   .custom-chip{
-    display:flex; align-items:center; gap:8px; justify-content:space-between;
+    display:flex; align-items:center; gap:8px; justify-content:space-between; flex-wrap:wrap;
     background:var(--white); border:1px solid var(--line); padding:6px 10px; font-size:12.5px; font-family:var(--mono);
   }
   .custom-chip button{background:none; border:none; color:var(--red); cursor:pointer; font-size:12px;}
+  .custom-chip .qty-multi{grid-column:auto; padding-left:0; flex:1 1 auto; justify-content:flex-end;}
+  .custom-chip .cc-label{flex:1 1 auto;}
 
   .generate-btn{
     width:100%;
@@ -322,11 +324,16 @@
   }
   .add-photo-btn:hover{border-color:var(--red); color:var(--red);}
 
-  .photo-select{
-    font-family:var(--mono); font-size:10.5px;
-    padding:3px 4px; border:1px solid var(--ink); background:var(--paper);
-    width:64px; max-width:64px;
+  .qty-multi{
+    grid-column:1 / -1;
+    display:flex; flex-wrap:wrap; gap:8px;
+    margin-top:2px; padding-left:32px;
   }
+  .qty-multi-item{
+    display:flex; align-items:center; gap:5px;
+    font-family:var(--mono); font-size:10.5px; color:var(--ink-soft);
+  }
+  .qty-multi-item .qty-input{width:44px;}
 
   /* Preset dropdown */
   .preset-row{margin-bottom:10px;}
@@ -550,8 +557,8 @@
 
   /* ---------- state ---------- */
   let photos = [];        // {id, name, img, zoom, offsetX, offsetY, canvas}
-  let sizes = DEFAULT_SIZES.map(s => ({...s, photoId:null}));
-  let customSizes = []; // {id,w,h,qty,note,photoId}
+  let sizes = DEFAULT_SIZES.map(s => ({...s, photoQty:{}}));
+  let customSizes = []; // {id,w,h,qty,note,photoQty}
   const croppedCache = new Map(); // key "photoId|wxh" -> dataURL
   let cropEditingPhoto = null;
   let cropBackup = null;
@@ -632,15 +639,43 @@
     if (Array.isArray(data.customSizes)){
       customSizes = data.customSizes
         .filter(s => s.w > 0 && s.h > 0)
-        .map(s => ({id:uid('custom'), w:s.w, h:s.h, qty:Math.max(1, parseInt(s.qty,10) || 1), note:s.note || '', photoId:null}));
+        .map(s => ({id:uid('custom'), w:s.w, h:s.h, qty:Math.max(1, parseInt(s.qty,10) || 1), note:s.note || '', photoQty:{}}));
     }
   }
   loadSettings();
 
   /* ---------- size / photo resolution ---------- */
-  function resolvePhotoId(s){
-    if (s.photoId && photos.some(p => p.id === s.photoId)) return s.photoId;
-    return photos[0] ? photos[0].id : null;
+  // Each size keeps a photoQty map ({photoId: count}) so its total quantity can be
+  // split across multiple uploaded photos instead of forcing a single photo per size.
+  function ensurePhotoQtySeeded(s){
+    if (!s.photoQty) s.photoQty = {};
+    if (photos.length >= 2 && Object.keys(s.photoQty).length === 0 && s.qty > 0){
+      s.photoQty[photos[0].id] = s.qty;
+    }
+  }
+
+  function syncQtyFromPhotoQty(s){
+    if (s.photoQty && Object.keys(s.photoQty).length){
+      s.qty = Object.values(s.photoQty).reduce((a,b) => a + (b||0), 0);
+    }
+  }
+
+  function getSizeAllocations(s){
+    ensurePhotoQtySeeded(s);
+    if (photos.length === 0) return [];
+    if (photos.length === 1) return s.qty > 0 ? [{photoId:photos[0].id, qty:s.qty}] : [];
+    return photos
+      .map(p => ({photoId:p.id, qty:(s.photoQty && s.photoQty[p.id]) || 0}))
+      .filter(a => a.qty > 0);
+  }
+
+  function renderQtyCell(s, idx, cssPrefix, ariaLabel){
+    if (photos.length > 1){
+      ensurePhotoQtySeeded(s);
+      return `<div class="qty-multi">${photos.map((p,i) => `
+        <label class="qty-multi-item"><span>P${i+1}</span><input type="number" class="qty-input ${cssPrefix}-qty-photo" data-idx="${idx}" data-photo="${p.id}" min="0" max="60" value="${s.photoQty[p.id]||0}" aria-label="${ariaLabel} from photo ${i+1}"></label>`).join('')}</div>`;
+    }
+    return `<input type="number" class="qty-input ${cssPrefix}-qty" data-idx="${idx}" min="0" max="60" value="${s.qty}" aria-label="${ariaLabel}">`;
   }
 
   function renderSizeList(){
@@ -648,17 +683,13 @@
     sizes.forEach((s, idx) => {
       const row = document.createElement('div');
       row.className = 'size-row';
-      const photoCell = photos.length > 1
-        ? `<select class="photo-select size-photo" data-idx="${idx}" aria-label="Photo for ${s.label}">${photos.map((p,i) => `<option value="${p.id}" ${resolvePhotoId(s)===p.id?'selected':''}>Photo ${i+1}</option>`).join('')}</select>`
-        : '<span></span>';
       row.innerHTML = `
         <input type="checkbox" data-idx="${idx}" class="size-check" ${s.enabled ? 'checked' : ''} aria-label="Include ${s.label}">
         <span>
           <span class="sname">${s.label}</span><br>
           <span class="sdim">${s.note}</span>
         </span>
-        <input type="number" class="qty-input size-qty" data-idx="${idx}" min="0" max="60" value="${s.qty}" aria-label="Quantity for ${s.label}">
-        ${photoCell}
+        ${renderQtyCell(s, idx, 'size', `Quantity for ${s.label}`)}
       `;
       sizeListEl.appendChild(row);
     });
@@ -670,11 +701,8 @@
     customSizes.forEach((s, idx) => {
       const chip = document.createElement('div');
       chip.className = 'custom-chip';
-      const label = `${s.note ? s.note + ' — ' : ''}${s.w.toFixed(2)}×${s.h.toFixed(2)} in — qty ${s.qty}`;
-      const photoCell = photos.length > 1
-        ? `<select class="photo-select custom-photo" data-idx="${idx}" aria-label="Photo for this size">${photos.map((p,i) => `<option value="${p.id}" ${resolvePhotoId(s)===p.id?'selected':''}>Photo ${i+1}</option>`).join('')}</select>`
-        : '';
-      chip.innerHTML = `<span>${label}</span>${photoCell}<button data-idx="${idx}" type="button">remove</button>`;
+      const label = `${s.note ? s.note + ' — ' : ''}${s.w.toFixed(2)}×${s.h.toFixed(2)} in`;
+      chip.innerHTML = `<span class="cc-label">${label}</span>${renderQtyCell(s, idx, 'custom', `Quantity for ${s.w}×${s.h} in`)}<button data-idx="${idx}" type="button">remove</button>`;
       customListEl.appendChild(chip);
     });
   }
@@ -688,8 +716,10 @@
       sizes[idx].enabled = e.target.checked;
     } else if (e.target.classList.contains('size-qty')){
       sizes[idx].qty = Math.max(0, parseInt(e.target.value || '0', 10));
-    } else if (e.target.classList.contains('size-photo')){
-      sizes[idx].photoId = e.target.value;
+    } else if (e.target.classList.contains('size-qty-photo')){
+      const s = sizes[idx];
+      if (!s.photoQty) s.photoQty = {};
+      s.photoQty[e.target.dataset.photo] = Math.max(0, parseInt(e.target.value || '0', 10));
     }
     scheduleUpdate();
   });
@@ -697,7 +727,7 @@
   addCustomBtn.addEventListener('click', () => {
     const w = parseFloat(customW.value), h = parseFloat(customH.value), qty = parseInt(customQty.value, 10);
     if (!w || !h || !qty || w <= 0 || h <= 0 || qty <= 0) return;
-    customSizes.push({id:uid('custom'), w, h, qty, note:'', photoId:null});
+    customSizes.push({id:uid('custom'), w, h, qty, note:'', photoQty:{}});
     renderCustomList();
     scheduleUpdate();
   });
@@ -711,9 +741,17 @@
   });
 
   customListEl.addEventListener('change', (e) => {
-    if (!e.target.classList.contains('custom-photo')) return;
-    const idx = parseInt(e.target.dataset.idx, 10);
-    customSizes[idx].photoId = e.target.value;
+    const idx = e.target.dataset.idx;
+    if (idx === undefined) return;
+    const s = customSizes[idx];
+    if (e.target.classList.contains('custom-qty')){
+      s.qty = Math.max(0, parseInt(e.target.value || '0', 10));
+    } else if (e.target.classList.contains('custom-qty-photo')){
+      if (!s.photoQty) s.photoQty = {};
+      s.photoQty[e.target.dataset.photo] = Math.max(0, parseInt(e.target.value || '0', 10));
+    } else {
+      return;
+    }
     scheduleUpdate();
   });
 
@@ -725,7 +763,7 @@
     if (!preset) return;
     const exists = customSizes.some(s => Math.abs(s.w - preset.w) < 0.005 && Math.abs(s.h - preset.h) < 0.005);
     if (exists) return;
-    customSizes.push({id:uid('custom'), w:preset.w, h:preset.h, qty:6, note:preset.label.split('—')[0].trim(), photoId:null});
+    customSizes.push({id:uid('custom'), w:preset.w, h:preset.h, qty:6, note:preset.label.split('—')[0].trim(), photoQty:{}});
     renderCustomList();
     scheduleUpdate();
   });
@@ -821,8 +859,10 @@
       const id = removeBtn.dataset.id;
       photos = photos.filter(p => p.id !== id);
       clearPhotoCache(id);
-      sizes.forEach(s => { if (s.photoId === id) s.photoId = null; });
-      customSizes.forEach(s => { if (s.photoId === id) s.photoId = null; });
+      [...sizes, ...customSizes].forEach(s => {
+        if (s.photoQty) delete s.photoQty[id];
+        if (photos.length <= 1) syncQtyFromPhotoQty(s);
+      });
       renderPhotoList();
       renderSizeList();
       renderCustomList();
@@ -932,8 +972,13 @@
   /* ---------- packing ---------- */
   function getActiveItems(){
     const items = [];
-    sizes.forEach(s => { if (s.enabled && s.qty > 0){ const photoId = resolvePhotoId(s); for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id, photoId}); } });
-    customSizes.forEach(s => { if (s.qty > 0){ const photoId = resolvePhotoId(s); for (let i=0;i<s.qty;i++) items.push({w:s.w, h:s.h, key:s.id, photoId}); } });
+    function pushAllocations(s){
+      getSizeAllocations(s).forEach(a => {
+        for (let i=0;i<a.qty;i++) items.push({w:s.w, h:s.h, key:s.id, photoId:a.photoId});
+      });
+    }
+    sizes.forEach(s => { if (s.enabled) pushAllocations(s); });
+    customSizes.forEach(s => pushAllocations(s));
     // largest first -> tidier shelves
     items.sort((a,b) => (b.h - a.h) || (b.w - a.w));
     return items;
