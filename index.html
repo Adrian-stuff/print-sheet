@@ -477,15 +477,23 @@
       <div class="size-list" id="sizeList"></div>
       <div class="custom-row">
         <div class="field-sm">
-          <label>W (in)</label>
-          <input type="number" id="customW" min="0.5" max="12" step="0.1" value="1.5">
+          <label for="customUnit">Unit</label>
+          <select id="customUnit">
+            <option value="in" selected>in</option>
+            <option value="cm">cm</option>
+            <option value="mm">mm</option>
+          </select>
         </div>
         <div class="field-sm">
-          <label>H (in)</label>
-          <input type="number" id="customH" min="0.5" max="12" step="0.1" value="1.5">
+          <label for="customW" id="customWLabel">W (in)</label>
+          <input type="number" id="customW" min="0.1" max="12" step="0.1" value="1.5">
         </div>
         <div class="field-sm">
-          <label>Qty</label>
+          <label for="customH" id="customHLabel">H (in)</label>
+          <input type="number" id="customH" min="0.1" max="12" step="0.1" value="1.5">
+        </div>
+        <div class="field-sm">
+          <label for="customQty">Qty</label>
           <input type="number" id="customQty" min="1" max="40" step="1" value="2">
         </div>
         <button class="add-btn" id="addCustomBtn" type="button">+ Add size</button>
@@ -666,6 +674,9 @@
   const presetSelect = document.getElementById('presetSelect');
   const sizeListEl = document.getElementById('sizeList');
   const customListEl = document.getElementById('customList');
+  const customUnit = document.getElementById('customUnit');
+  const customWLabel = document.getElementById('customWLabel');
+  const customHLabel = document.getElementById('customHLabel');
   const customW = document.getElementById('customW');
   const customH = document.getElementById('customH');
   const customQty = document.getElementById('customQty');
@@ -695,6 +706,22 @@
     '5:7':  [5, 7],
   };
 
+  // inches per 1 unit — used to convert custom-size entry fields to the
+  // inches that the rest of the app (packing, PDF export) works in.
+  const UNIT_TO_IN = { in: 1, cm: 1 / 2.54, mm: 1 / 25.4 };
+  const UNIT_STEP = { in: 0.1, cm: 0.1, mm: 1 };
+  const UNIT_MIN = { in: 0.1, cm: 0.2, mm: 2 };
+  const UNIT_MAX = { in: 12, cm: 30, mm: 300 };
+  const UNIT_DECIMALS = { in: 2, cm: 2, mm: 1 };
+
+  function roundForUnit(value, unit){
+    const f = Math.pow(10, UNIT_DECIMALS[unit] || 2);
+    return Math.round(value * f) / f;
+  }
+
+  function inToUnit(inches, unit){ return inches / UNIT_TO_IN[unit]; }
+  function unitToIn(value, unit){ return value * UNIT_TO_IN[unit]; }
+
   /* ---------- init selects ---------- */
   PAPERS.forEach(p => {
     const opt = document.createElement('option');
@@ -717,7 +744,7 @@
       margin: marginInput.value,
       gap: gapInput.value,
       sizes: sizes.map(s => ({id:s.id, enabled:s.enabled, qty:s.qty})),
-      customSizes: customSizes.map(s => ({w:s.w, h:s.h, qty:s.qty, note:s.note})),
+      customSizes: customSizes.map(s => ({w:s.w, h:s.h, qty:s.qty, note:s.note, unit:s.unit})),
     };
     try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(data)); }catch(e){}
   }
@@ -742,7 +769,7 @@
     if (Array.isArray(data.customSizes)){
       customSizes = data.customSizes
         .filter(s => s.w > 0 && s.h > 0)
-        .map(s => ({id:uid('custom'), w:s.w, h:s.h, qty:Math.max(1, parseInt(s.qty,10) || 1), note:s.note || '', photoQty:{}}));
+        .map(s => ({id:uid('custom'), w:s.w, h:s.h, qty:Math.max(1, parseInt(s.qty,10) || 1), note:s.note || '', unit:UNIT_TO_IN[s.unit] ? s.unit : 'in', photoQty:{}}));
     }
   }
   loadSettings();
@@ -799,17 +826,47 @@
   }
   renderSizeList();
 
+  function formatCustomDims(s){
+    const unit = s.unit || 'in';
+    const dispW = inToUnit(s.w, unit), dispH = inToUnit(s.h, unit);
+    const dec = UNIT_DECIMALS[unit] ?? 2;
+    let dims = `${dispW.toFixed(dec)}×${dispH.toFixed(dec)} ${unit}`;
+    if (unit !== 'in') dims += ` (${s.w.toFixed(2)}×${s.h.toFixed(2)} in)`;
+    return dims;
+  }
+
   function renderCustomList(){
     customListEl.innerHTML = '';
     customSizes.forEach((s, idx) => {
       const chip = document.createElement('div');
       chip.className = 'custom-chip';
-      const label = `${s.note ? s.note + ' — ' : ''}${s.w.toFixed(2)}×${s.h.toFixed(2)} in`;
+      const label = `${s.note ? s.note + ' — ' : ''}${formatCustomDims(s)}`;
       chip.innerHTML = `<span class="cc-label">${label}</span>${renderQtyCell(s, idx, 'custom', `Quantity for ${s.w}×${s.h} in`)}<button data-idx="${idx}" type="button">remove</button>`;
       customListEl.appendChild(chip);
     });
   }
   renderCustomList();
+
+  /* ---------- custom size unit conversion ---------- */
+  function applyCustomUnitAttrs(unit){
+    customW.min = customH.min = UNIT_MIN[unit];
+    customW.max = customH.max = UNIT_MAX[unit];
+    customW.step = customH.step = UNIT_STEP[unit];
+    customWLabel.textContent = `W (${unit})`;
+    customHLabel.textContent = `H (${unit})`;
+  }
+  let lastCustomUnit = customUnit.value;
+  applyCustomUnitAttrs(lastCustomUnit);
+
+  customUnit.addEventListener('change', () => {
+    const newUnit = customUnit.value;
+    const wVal = parseFloat(customW.value);
+    const hVal = parseFloat(customH.value);
+    if (!isNaN(wVal)) customW.value = roundForUnit(inToUnit(unitToIn(wVal, lastCustomUnit), newUnit), newUnit);
+    if (!isNaN(hVal)) customH.value = roundForUnit(inToUnit(unitToIn(hVal, lastCustomUnit), newUnit), newUnit);
+    applyCustomUnitAttrs(newUnit);
+    lastCustomUnit = newUnit;
+  });
 
   /* ---------- events: sizes ---------- */
   sizeListEl.addEventListener('change', (e) => {
@@ -828,9 +885,11 @@
   });
 
   addCustomBtn.addEventListener('click', () => {
-    const w = parseFloat(customW.value), h = parseFloat(customH.value), qty = parseInt(customQty.value, 10);
-    if (!w || !h || !qty || w <= 0 || h <= 0 || qty <= 0) return;
-    customSizes.push({id:uid('custom'), w, h, qty, note:'', photoQty:{}});
+    const unit = customUnit.value;
+    const wRaw = parseFloat(customW.value), hRaw = parseFloat(customH.value), qty = parseInt(customQty.value, 10);
+    if (!wRaw || !hRaw || !qty || wRaw <= 0 || hRaw <= 0 || qty <= 0) return;
+    const w = unitToIn(wRaw, unit), h = unitToIn(hRaw, unit);
+    customSizes.push({id:uid('custom'), w, h, qty, note:'', unit, photoQty:{}});
     renderCustomList();
     scheduleUpdate();
   });
@@ -866,7 +925,7 @@
     if (!preset) return;
     const exists = customSizes.some(s => Math.abs(s.w - preset.w) < 0.005 && Math.abs(s.h - preset.h) < 0.005);
     if (exists) return;
-    customSizes.push({id:uid('custom'), w:preset.w, h:preset.h, qty:6, note:preset.label.split('—')[0].trim(), photoQty:{}});
+    customSizes.push({id:uid('custom'), w:preset.w, h:preset.h, qty:6, note:preset.label.split('—')[0].trim(), unit:'in', photoQty:{}});
     renderCustomList();
     scheduleUpdate();
   });
