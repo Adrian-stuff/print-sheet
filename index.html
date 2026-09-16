@@ -351,12 +351,22 @@
   .crop-stage{
     position:relative; width:100%; aspect-ratio:1/1; overflow:hidden;
     background:var(--ink); border:1px solid var(--ink); cursor:grab; touch-action:none;
+    max-height:60vh; margin:0 auto;
   }
   .crop-stage.dragging{cursor:grabbing;}
   .crop-stage canvas{position:absolute; top:0; left:0; width:100%; height:100%;}
   .crop-controls{display:flex; align-items:center; gap:10px;}
   .crop-controls label{font-family:var(--mono); font-size:11px; color:var(--ink-soft); flex-shrink:0;}
   .crop-controls input[type=range]{flex:1; accent-color:var(--red);}
+  .crop-controls select{
+    flex:1; font-family:var(--mono); font-size:12.5px; padding:7px 8px;
+    border:1.5px solid var(--ink); background:var(--white); color:var(--ink); border-radius:var(--radius);
+  }
+  .crop-custom-ratio{display:flex; align-items:end; gap:8px;}
+  .crop-custom-ratio .field-sm{flex:1; min-width:0;}
+  .crop-custom-ratio label{font-size:11px; margin-bottom:4px; display:block; font-family:var(--mono); color:var(--ink-soft);}
+  .crop-custom-ratio input[type=number]{padding:7px 8px; font-size:13px;}
+  .crop-custom-ratio span{font-family:var(--mono); color:var(--ink-soft); padding-bottom:9px;}
   .crop-actions{display:flex; gap:10px; justify-content:flex-end;}
   .crop-actions button{
     font-family:var(--mono); font-size:12px; padding:9px 14px; cursor:pointer; border:1.5px solid var(--ink);
@@ -516,6 +526,23 @@
 <div class="crop-overlay" id="cropOverlay" style="display:none;">
   <div class="crop-modal">
     <h2>Adjust crop</h2>
+    <div class="crop-controls">
+      <label for="cropAspect">Aspect ratio</label>
+      <select id="cropAspect">
+        <option value="1:1" selected>Square · 1:1</option>
+        <option value="4:3">Standard · 4:3</option>
+        <option value="3:2">Photo · 3:2</option>
+        <option value="16:9">Widescreen · 16:9</option>
+        <option value="9:16">Vertical · 9:16</option>
+        <option value="5:7">Portrait · 5:7</option>
+        <option value="custom">Custom…</option>
+      </select>
+    </div>
+    <div class="crop-custom-ratio" id="cropCustomRatio" style="display:none;">
+      <div class="field-sm"><label for="cropCustomW">Width</label><input type="number" id="cropCustomW" min="1" max="100" step="0.1" value="16"></div>
+      <span>:</span>
+      <div class="field-sm"><label for="cropCustomH">Height</label><input type="number" id="cropCustomH" min="1" max="100" step="0.1" value="9"></div>
+    </div>
     <div class="crop-stage" id="cropStage">
       <canvas id="cropCanvas"></canvas>
     </div>
@@ -523,7 +550,7 @@
       <label for="cropZoom">Zoom</label>
       <input type="range" id="cropZoom" min="1" max="3" step="0.01" value="1">
     </div>
-    <p class="crop-hint">Drag to reposition. Use the slider to zoom. The square area shown is exactly what gets printed.</p>
+    <p class="crop-hint" id="cropHint">Drag to reposition. Use the slider to zoom. The highlighted area is exactly what gets printed. Individual sizes are then centre-cropped further from this area to fit their own shape.</p>
     <div class="crop-actions">
       <button class="cancel-btn" id="cropCancelBtn" type="button">Cancel</button>
       <button class="save-btn" id="cropSaveBtn" type="button">Save crop</button>
@@ -652,8 +679,21 @@
   const cropStage = document.getElementById('cropStage');
   const cropCanvas = document.getElementById('cropCanvas');
   const cropZoom = document.getElementById('cropZoom');
+  const cropAspect = document.getElementById('cropAspect');
+  const cropCustomRatio = document.getElementById('cropCustomRatio');
+  const cropCustomW = document.getElementById('cropCustomW');
+  const cropCustomH = document.getElementById('cropCustomH');
   const cropCancelBtn = document.getElementById('cropCancelBtn');
   const cropSaveBtn = document.getElementById('cropSaveBtn');
+
+  const ASPECT_PRESETS = {
+    '1:1':  [1, 1],
+    '4:3':  [4, 3],
+    '3:2':  [3, 2],
+    '16:9': [16, 9],
+    '9:16': [9, 16],
+    '5:7':  [5, 7],
+  };
 
   /* ---------- init selects ---------- */
   PAPERS.forEach(p => {
@@ -837,25 +877,37 @@
   });
 
   /* ---------- crop math ---------- */
+  function getPhotoAspectRatio(photo){
+    const w = photo.aspectW || 1, h = photo.aspectH || 1;
+    return (w > 0 && h > 0) ? (w / h) : 1;
+  }
+
   function clampCropState(photo){
     const iw = photo.img.naturalWidth, ih = photo.img.naturalHeight;
-    const baseSide = Math.min(iw, ih);
-    const side = baseSide / photo.zoom;
-    const maxOffX = Math.max(0, (iw - side) / 2);
-    const maxOffY = Math.max(0, (ih - side) / 2);
+    const ar = getPhotoAspectRatio(photo);
+    // largest rectangle of ratio `ar` that fits inside the source image
+    const baseW = Math.min(iw, ih * ar);
+    const baseH = baseW / ar;
+    const cw = baseW / photo.zoom, ch = baseH / photo.zoom;
+    const maxOffX = Math.max(0, (iw - cw) / 2);
+    const maxOffY = Math.max(0, (ih - ch) / 2);
     photo.offsetX = Math.max(-maxOffX, Math.min(maxOffX, photo.offsetX));
     photo.offsetY = Math.max(-maxOffY, Math.min(maxOffY, photo.offsetY));
     const cx = iw / 2 + photo.offsetX, cy = ih / 2 + photo.offsetY;
-    return { sx: cx - side / 2, sy: cy - side / 2, side };
+    return { sx: cx - cw / 2, sy: cy - ch / 2, cw, ch };
   }
 
   function renderMasterCanvas(photo){
-    const { sx, sy, side } = clampCropState(photo);
-    const outSide = Math.min(1600, Math.max(600, Math.round(side)));
+    const { sx, sy, cw, ch } = clampCropState(photo);
+    const longSide = Math.max(cw, ch);
+    const targetLong = Math.min(1600, Math.max(600, Math.round(longSide)));
+    const scale = targetLong / longSide;
+    const outW = Math.max(1, Math.round(cw * scale));
+    const outH = Math.max(1, Math.round(ch * scale));
     const cnv = document.createElement('canvas');
-    cnv.width = outSide; cnv.height = outSide;
+    cnv.width = outW; cnv.height = outH;
     const ctx = cnv.getContext('2d');
-    ctx.drawImage(photo.img, sx, sy, side, side, 0, 0, outSide, outSide);
+    ctx.drawImage(photo.img, sx, sy, cw, ch, 0, 0, outW, outH);
     photo.canvas = cnv;
   }
 
@@ -883,7 +935,7 @@
       reader.onload = (ev) => {
         const img = new Image();
         img.onload = () => {
-          const photo = { id: uid('photo'), name: file.name, img, zoom: 1, offsetX: 0, offsetY: 0, canvas: null };
+          const photo = { id: uid('photo'), name: file.name, img, zoom: 1, offsetX: 0, offsetY: 0, aspectW: 1, aspectH: 1, canvas: null };
           renderMasterCanvas(photo);
           photos.push(photo);
           renderPhotoList();
@@ -940,10 +992,34 @@
   });
 
   /* ---------- crop editor modal ---------- */
+  function aspectPresetKey(photo){
+    const w = photo.aspectW || 1, h = photo.aspectH || 1;
+    for (const key in ASPECT_PRESETS){
+      const [pw, ph] = ASPECT_PRESETS[key];
+      if (Math.abs(pw / ph - w / h) < 1e-6) return key;
+    }
+    return 'custom';
+  }
+
+  function applyCropStageAspect(photo){
+    const w = photo.aspectW || 1, h = photo.aspectH || 1;
+    cropStage.style.aspectRatio = `${w} / ${h}`;
+  }
+
   function openCropEditor(photo){
     cropEditingPhoto = photo;
-    cropBackup = { zoom: photo.zoom, offsetX: photo.offsetX, offsetY: photo.offsetY };
+    cropBackup = { zoom: photo.zoom, offsetX: photo.offsetX, offsetY: photo.offsetY, aspectW: photo.aspectW, aspectH: photo.aspectH };
     cropZoom.value = photo.zoom;
+    const key = aspectPresetKey(photo);
+    cropAspect.value = key;
+    if (key === 'custom'){
+      cropCustomRatio.style.display = 'flex';
+      cropCustomW.value = photo.aspectW || 1;
+      cropCustomH.value = photo.aspectH || 1;
+    } else {
+      cropCustomRatio.style.display = 'none';
+    }
+    applyCropStageAspect(photo);
     cropOverlay.style.display = 'flex';
     drawCropPreview();
   }
@@ -958,18 +1034,46 @@
     const photo = cropEditingPhoto;
     if (!photo) return;
     const rect = cropStage.getBoundingClientRect();
-    const size = Math.round(rect.width) || 400;
-    cropCanvas.width = size; cropCanvas.height = size;
+    const cw = Math.max(1, Math.round(rect.width));
+    const ch = Math.max(1, Math.round(rect.height));
+    cropCanvas.width = cw; cropCanvas.height = ch;
     const ctx = cropCanvas.getContext('2d');
-    const { sx, sy, side } = clampCropState(photo);
-    ctx.clearRect(0, 0, size, size);
-    ctx.drawImage(photo.img, sx, sy, side, side, 0, 0, size, size);
+    const { sx, sy, cw: srcW, ch: srcH } = clampCropState(photo);
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.drawImage(photo.img, sx, sy, srcW, srcH, 0, 0, cw, ch);
   }
 
   cropZoom.addEventListener('input', () => {
     if (!cropEditingPhoto) return;
     cropEditingPhoto.zoom = parseFloat(cropZoom.value);
     drawCropPreview();
+  });
+
+  function setPhotoAspect(w, h){
+    if (!cropEditingPhoto || !(w > 0) || !(h > 0)) return;
+    cropEditingPhoto.aspectW = w;
+    cropEditingPhoto.aspectH = h;
+    applyCropStageAspect(cropEditingPhoto);
+    drawCropPreview();
+  }
+
+  cropAspect.addEventListener('change', () => {
+    const key = cropAspect.value;
+    if (key === 'custom'){
+      cropCustomRatio.style.display = 'flex';
+      setPhotoAspect(parseFloat(cropCustomW.value) || 1, parseFloat(cropCustomH.value) || 1);
+    } else {
+      cropCustomRatio.style.display = 'none';
+      const [w, h] = ASPECT_PRESETS[key] || [1, 1];
+      setPhotoAspect(w, h);
+    }
+  });
+
+  [cropCustomW, cropCustomH].forEach(el => {
+    el.addEventListener('input', () => {
+      if (cropAspect.value !== 'custom') return;
+      setPhotoAspect(parseFloat(cropCustomW.value) || 1, parseFloat(cropCustomH.value) || 1);
+    });
   });
 
   cropStage.addEventListener('pointerdown', (e) => {
@@ -982,12 +1086,13 @@
   cropStage.addEventListener('pointermove', (e) => {
     if (!cropDragging || !cropEditingPhoto) return;
     const rect = cropStage.getBoundingClientRect();
-    const { side } = clampCropState(cropEditingPhoto);
-    const factor = side / rect.width;
+    const { cw, ch } = clampCropState(cropEditingPhoto);
+    const factorX = cw / rect.width;
+    const factorY = ch / rect.height;
     const dx = e.clientX - cropDragStart.x;
     const dy = e.clientY - cropDragStart.y;
-    cropEditingPhoto.offsetX = cropDragStart.offsetX - dx * factor;
-    cropEditingPhoto.offsetY = cropDragStart.offsetY - dy * factor;
+    cropEditingPhoto.offsetX = cropDragStart.offsetX - dx * factorX;
+    cropEditingPhoto.offsetY = cropDragStart.offsetY - dy * factorY;
     drawCropPreview();
   });
   function endCropDrag(){ cropDragging = false; cropStage.classList.remove('dragging'); }
@@ -1015,11 +1120,13 @@
     if (!photo) return '';
     const key = photo.id + '|' + w.toFixed(3) + 'x' + h.toFixed(3);
     if (croppedCache.has(key)) return croppedCache.get(key);
-    const S = photo.canvas.width;
+    const srcW = photo.canvas.width, srcH = photo.canvas.height;
     const ar = w / h;
+    const srcAr = srcW / srcH;
+    // centre-crop the master canvas (whatever its own aspect ratio) down to `ar`
     let cw, ch, cx, cy;
-    if (ar >= 1){ cw = S; ch = S / ar; cx = 0; cy = (S - ch) / 2; }
-    else { ch = S; cw = S * ar; cy = 0; cx = (S - cw) / 2; }
+    if (srcAr > ar){ ch = srcH; cw = srcH * ar; cy = 0; cx = (srcW - cw) / 2; }
+    else { cw = srcW; ch = srcW / ar; cx = 0; cy = (srcH - ch) / 2; }
     const cnv = document.createElement('canvas');
     // keep reasonable output resolution regardless of crop
     const scaleUp = 1200 / Math.max(cw, ch);
